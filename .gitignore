@@ -1,0 +1,13 @@
+# LaTeX auxiliary / build files
+*.synctex.gz
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.dpth
+*.md5
+*.auxlock

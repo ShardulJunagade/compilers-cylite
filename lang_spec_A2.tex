@@ -1,0 +1,353 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{listings}
+
+% Compact list spacing (keeps the PDF from looking too sparse)
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+\setlist[enumerate]{leftmargin=*,topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+
+\hypersetup{
+	colorlinks=true,
+	linkcolor=black,
+	urlcolor=black,
+	citecolor=black
+}
+
+\lstset{
+	basicstyle=\ttfamily\small,
+	columns=fullflexible,
+	keepspaces=true,
+	frame=single,
+	breaklines=true,
+	showstringspaces=false
+}
+
+\title{CS 327: Compilers \\Assignment A2: Lexical Analyzer (Language Specification)}
+\author{Swayam Borate\\(23110066) \and Shardul Junagade\\(23110297) \and Tejas Lohia\\(23110335)}
+\date{06 February 2026}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+This document specifies the source language for our group compiler project.
+For Assignment A2, the main deliverable is the lexical analyzer; this PDF is our language-specification write-up for the same.
+The intent is to keep the language close to a small, C-like core so that it remains implementable using \texttt{lex} and \texttt{yacc} in C.
+
+As a reference starting point, we studied the provided \emph{YAPL} specification (a C-like teaching language).
+Our language is \emph{adapted from that reference} in the sense that we keep the same overall style (C-like syntax, expressions, and statements).
+On top of the baseline, we add a few small extensions that we proposed and confirmed.
+
+\paragraph{Phase focus.}
+Since A2 focuses on scanning, this specification emphasizes tokens, literals, operators, and comment rules.
+We include a small syntax sketch only where it helps remove ambiguity during tokenization. Full parsing details will be handled in later phases.
+
+\section{Design goals}
+\subsection*{Goals}
+\begin{itemize}
+	\item A C-like language with familiar declarations, expressions, and control flow.
+	\item A clean token set suitable for a \texttt{lex} scanner and a future \texttt{yacc} parser.
+	\item Predictable handling of comments, strings, and numeric literals.
+\end{itemize}
+
+% \subsection*{Non-goals (at this stage)}
+% \begin{itemize}
+% 	\item No type checking, scope checking, or semantic validation.
+% 	\item No requirement to track declared/defined entities before use.
+% 	\item No expression evaluation rules are required beyond syntactic structure.
+% \end{itemize}
+
+\section{Baseline (YAPL-like) feature set}
+Unless stated otherwise in later sections, the baseline language includes the following C-like constructs.
+
+\subsection*{Declarations and definitions}
+\begin{itemize}
+	\item Global variables (including \texttt{extern} declarations).
+	\item Function declarations (prototypes) and function definitions (with bodies), including recursion.
+	\item Local declarations inside blocks; multiple declarators separated by commas.
+	\item \texttt{struct} types and field access using \texttt{.} and \texttt{->}.
+\end{itemize}
+
+\subsection*{Statements}
+\begin{itemize}
+	\item Selection: \texttt{if} / \texttt{else} ladders; \texttt{switch} / \texttt{case} with optional \texttt{default} and fall-through.
+	\item Iteration: \texttt{for}, \texttt{while}, and \texttt{do-while} loops.
+	\item Jump: \texttt{break}, \texttt{continue}, \texttt{return}.
+	\item Expression statements ending with a semicolon.
+\end{itemize}
+
+\subsection*{Literals}
+\begin{itemize}
+	\item Integer literals (decimal and hexadecimal of the form \texttt{0x...}).
+	\item Floating-point literals.
+	\item Character literals and string literals.
+	\item Adjacent string literals are treated as concatenated (C-style), e.g., \texttt{"a" "b"}.
+\end{itemize}
+
+\subsection*{Operators (C-like precedence)}
+The baseline keeps the usual precedence/associativity of C for the supported operators, and adds a three-way comparison operator \texttt{<=>}.
+
+\section{Extensions proposed by our team}
+In addition to the baseline, we add the following features.
+
+\subsection{\texttt{elif} as a replacement for \texttt{else if}}
+We support \texttt{elif} as syntactic sugar inside an if-ladder.
+It behaves like \texttt{else if}.
+
+Example:
+\begin{lstlisting}
+if (x < 0) {
+	print("neg");
+} elif (x == 0) {
+	print("zero");
+} else {
+	print("pos");
+}
+\end{lstlisting}
+
+\subsection{\texttt{pass} as an empty statement}
+We support \texttt{pass;} as an explicit no-op statement.
+This is equivalent to an empty statement \texttt{;}, but is easier to read in some contexts.
+
+\subsection{Built-ins \texttt{print(...)} and \texttt{range(...)}}
+We treat \texttt{print} and \texttt{range} as built-in functions.
+For the compiler front-end, this mainly means they are reserved words and have fixed call syntax.
+
+\begin{itemize}
+	\item \texttt{print(expr\_list?)}: prints its arguments; the exact runtime behavior is out of scope.
+	\item \texttt{range(l, r)}: produces an integer sequence used by the restricted loop form described next.
+\end{itemize}
+
+\subsection{Restricted Python-style loop: \texttt{for (i in range(l, r))}}
+We add a specific loop form:
+\begin{lstlisting}
+for (i in range(l, r)) stmt
+\end{lstlisting}
+
+\noindent Constraints (kept intentionally narrow for clean parsing):
+\begin{itemize}
+	\item The loop variable must be an identifier (e.g., \texttt{i}).
+	\item The iterator expression must be exactly \texttt{range(l, r)} with two expressions.
+	\item No step argument is supported in \texttt{range} for this loop form.
+\end{itemize}
+
+\noindent Intended meaning (informal): iterate with \texttt{i} taking values from \texttt{l} up to but not including \texttt{r} (half-open interval like Python).
+This meaning is informational; for A2/A3 we only require correct scanning and parsing.
+
+\subsection{\texttt{\#} as a single-line comment}
+In addition to \texttt{//} and \texttt{/* ... */}, we support \texttt{\#} as a single-line comment starter.
+Since preprocessors are not part of the language, \texttt{\#} is never treated as a directive.
+
+\subsection{\texttt{try-except} exception handling}
+We add Python-like exception handling using C-style blocks.
+The minimal supported form is:
+\begin{lstlisting}
+try { ... } except { ... }
+\end{lstlisting}
+
+\noindent Notes:
+\begin{itemize}
+	\item Only a single \texttt{except} clause is required.
+	\item We do not require exception types, raising, or matching in A2/A3.
+\end{itemize}
+
+\subsection{Optional operator extensions (only if clean)}
+We are considering two additional operators as optional extensions.
+They are not required for the base submission if they complicate precedence/lexing.
+
+\begin{itemize}
+	\item \texttt{**} (exponent): right-associative; higher precedence than \texttt{* / \%}.
+	\item \texttt{??} (null-coalescing): returns the left operand if it is non-null, otherwise the right operand.
+				For parsing, it can be treated as right-associative with precedence between logical-or (\texttt{||}) and assignment (\texttt{=}).
+\end{itemize}
+
+\section{Lexical structure}
+\subsection{Whitespace}
+Spaces, tabs, and newlines separate tokens and are otherwise ignored, except that newlines terminate single-line comments.
+
+\subsection{Identifiers}
+Identifiers follow the usual C rule:
+\begin{itemize}
+	\item start with a letter or underscore;
+	\item continue with letters, digits, or underscores.
+\end{itemize}
+
+\noindent In regular-expression form:
+\begin{lstlisting}
+[A-Za-z_][A-Za-z0-9_]*
+\end{lstlisting}
+
+\subsection{Reserved keywords}
+The following words are reserved and cannot be used as identifiers.
+
+\paragraph{Core keywords.}
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\texttt{int} & \texttt{long} & \texttt{short} & \texttt{char} \\
+\texttt{float} & \texttt{double} & \texttt{void} & \texttt{struct} \\
+\texttt{extern} & \texttt{return} & \texttt{break} & \texttt{continue} \\
+\texttt{if} & \texttt{else} & \texttt{switch} & \texttt{case} \\
+\texttt{default} & \texttt{for} & \texttt{while} & \texttt{do} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Extension keywords.}
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\texttt{elif} & \texttt{pass} & \texttt{try} & \texttt{except} \\
+\texttt{print} & \texttt{range} & \texttt{in} &  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Any standard C keyword \emph{not} listed above is treated as a normal identifier in our language.
+This keeps the keyword list small and helps with scanning.
+
+\subsection{Numeric literals}
+\paragraph{Integer literals.}
+We support:
+\begin{itemize}
+	\item decimal: \texttt{0} or \texttt{[1-9][0-9]*}
+	\item hexadecimal: prefix \texttt{0x} followed by one or more hex digits \texttt{[0-9a-fA-F]+}
+\end{itemize}
+
+\paragraph{Floating-point literals.}
+We support typical decimal floats such as \texttt{3.14}, \texttt{0.5}, and \texttt{10.}.
+Scientific notation may be added later if needed.
+
+\subsection{Character and string literals}
+\paragraph{Character literals.}
+Single-quoted characters like \texttt{'a'} are supported.
+Common escape sequences may be supported (e.g., \texttt{\textbackslash n}, \texttt{\textbackslash t}, \texttt{\textbackslash \\}, \texttt{\textbackslash '}).
+
+\paragraph{String literals.}
+Double-quoted strings like \texttt{"hello"} are supported, with escape sequences similar to character literals.
+Adjacent strings are concatenated:
+\begin{lstlisting}
+"hello" "world"   // treated as one string
+\end{lstlisting}
+
+\subsection{Comments}
+\begin{itemize}
+	\item \textbf{Single-line (C++ style):} \texttt{//} continues up to the end of the line.
+	\item \textbf{Single-line (extension):} \texttt{\#} continues up to the end of the line.
+	\item \textbf{Multi-line:} \texttt{/*} begins a comment that ends at the next \texttt{*/}.
+\end{itemize}
+
+\noindent If the input ends while inside a multi-line comment, the lexer must treat it as an error (ill-formed/unclosed comment).
+
+\section{Operators and punctuators}
+Table~\ref{tab:ops} lists the main operators and separators.
+Where we say ``C precedence'', it refers to the standard precedence and associativity used in C for the listed operators.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{ll}
+\toprule
+Category & Tokens \\
+\midrule
+Arithmetic & \texttt{+} \texttt{-} \texttt{*} \texttt{/} \texttt{\%} \\
+Relational & \texttt{<} \texttt{>} \texttt{<=} \texttt{>=} \texttt{==} \texttt{!=} \texttt{<=>} \\
+Logical & \texttt{\&\&} \texttt{||} \texttt{!} \\
+Bitwise (subset) & \texttt{\&} \texttt{|} \texttt{\string^} \texttt{\~} \\
+Unary / special & \texttt{sizeof} \\
+Assignment & \texttt{=} \\
+Inc/Dec & \texttt{++} \texttt{--} \\
+Pointer / address & \texttt{*} \texttt{\&} \\
+Field access & \texttt{.} \texttt{->} \\
+Calls / indexing & \texttt{( )} \texttt{[ ]} \\
+Separators & \texttt{,} \texttt{;} \texttt{:} \\
+Grouping & \texttt{\{} \texttt{\}} \\
+\bottomrule
+\end{tabular}
+\caption{Operators and punctuators}
+\label{tab:ops}
+\end{table}
+
+\noindent Not supported (by design): preprocessors/directives, ternary \texttt{?:}, compound assignments (\texttt{+=}, \texttt{-=}, \dots), shift operators (\texttt{<<}, \texttt{>>}), and varargs/ellipsis (\texttt{...}).
+
+\section{Syntax sketch (informal)}
+This section is not a full grammar, but it captures the main statement forms.
+
+% \begin{itemize}
+% 	\item \textbf{Compound statement:} \texttt{\{ decl* stmt* \}}
+% 	\item \textbf{Expression statement:} \texttt{expr ;}
+% 	\item \textbf{Empty statement:} \texttt{;} or \texttt{pass ;}
+% 	\item \textbf{If ladder:}
+% 		\texttt{if (expr) stmt (elif (expr) stmt)* (else stmt)?}
+% 	\item \textbf{Loops:}
+% 		\texttt{while (expr) stmt}, \texttt{do stmt while (expr) ;},
+% 		\texttt{for (init? ; cond? ; step?) stmt},
+% 		\texttt{for (id in range(expr, expr)) stmt}
+% 	\item \textbf{Switch:}
+% 		\texttt{switch (expr) \{ (case const : stmt*)* (default : stmt*)? \}}
+% 	\item \textbf{Try/except:}
+% 		\texttt{try \{ stmt* \} except \{ stmt* \}}
+% 	\item \textbf{Jump:} \texttt{break ;}, \texttt{continue ;}, \texttt{return expr? ;}
+% \end{itemize}
+
+\begin{itemize}
+  \item \textbf{Compound statement:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{\{ decl* stmt* \}}
+    \end{itemize}
+
+  \item \textbf{Expression statement:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{expr ;}
+    \end{itemize}
+
+  \item \textbf{Empty statement:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{;} or \texttt{pass ;}
+    \end{itemize}
+
+  \item \textbf{If ladder:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{if (expr) stmt (elif (expr) stmt)* (else stmt)?}
+    \end{itemize}
+
+  \item \textbf{Loops:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{while (expr) stmt}
+      \item \texttt{do stmt while (expr) ;}
+      \item \texttt{for (init? ; cond? ; step?) stmt}
+      \item \texttt{for (id in range(expr, expr)) stmt}
+    \end{itemize}
+
+  \item \textbf{Switch:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{switch (expr) \{ (case const : stmt*)* (default : stmt*)? \}}
+    \end{itemize}
+
+  \item \textbf{Try/except:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{try \{ stmt* \} except \{ stmt* \}}
+    \end{itemize}
+
+  \item \textbf{Jump:}
+    \begin{itemize}[label={},leftmargin=2em]
+      \item \texttt{break ;}
+      \item \texttt{continue ;}
+      \item \texttt{return expr? ;}
+    \end{itemize}
+\end{itemize}
+
+
+% \section{Implementation notes for A2}
+% \begin{itemize}
+% 	\item The scanner should recognize the tokens and ignore comments/whitespace.
+% 	\item Unterminated multi-line comments must be detected as a lexer error.
+% \end{itemize}
+
+\end{document}
