@@ -281,7 +281,7 @@ typedef union YYSTYPE
 	struct symtab *symp;
 }
 /* Line 193 of yacc.c.  */
-#line 285 "yapl.tab.c"
+#line 285 "y.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -294,7 +294,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 298 "yapl.tab.c"
+#line 298 "y.tab.c"
 
 #ifdef short
 # undef short
@@ -2412,42 +2412,42 @@ yyreduce:
     {
         case 7:
 #line 57 "yapl.y"
-    {int_consts++;;}
+    {int_consts++;}
     break;
 
   case 166:
 #line 354 "yapl.y"
-    {pointer_decls++;;}
+    {pointer_decls++;}
     break;
 
   case 255:
 #line 516 "yapl.y"
-    { ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--; ;}
+    { ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--; }
     break;
 
   case 256:
 #line 520 "yapl.y"
-    { ifs_wo_else++; ;}
+    { ifs_wo_else++; }
     break;
 
   case 269:
 #line 542 "yapl.y"
-    {global_declarations++;;}
+    {global_declarations++;}
     break;
 
   case 270:
 #line 543 "yapl.y"
-    {global_declarations++;;}
+    {global_declarations++;}
     break;
 
   case 271:
 #line 547 "yapl.y"
-    {func_definitions++;;}
+    {func_definitions++;}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 2451 "yapl.tab.c"
+#line 2451 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

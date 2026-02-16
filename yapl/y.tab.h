@@ -39,157 +39,173 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     IDENTIFIER = 258,
-     I_CONSTANT = 259,
-     F_CONSTANT = 260,
-     STRING_LITERAL = 261,
-     FUNC_NAME = 262,
-     SIZEOF = 263,
-     PTR_OP = 264,
-     INC_OP = 265,
-     DEC_OP = 266,
-     LEFT_OP = 267,
-     RIGHT_OP = 268,
-     LE_OP = 269,
-     GE_OP = 270,
-     EQ_OP = 271,
-     NE_OP = 272,
-     TH_OP = 273,
-     AND_OP = 274,
-     OR_OP = 275,
-     MUL_ASSIGN = 276,
-     DIV_ASSIGN = 277,
-     MOD_ASSIGN = 278,
-     ADD_ASSIGN = 279,
-     SUB_ASSIGN = 280,
-     LEFT_ASSIGN = 281,
-     RIGHT_ASSIGN = 282,
-     AND_ASSIGN = 283,
-     XOR_ASSIGN = 284,
-     OR_ASSIGN = 285,
-     TYPEDEF_NAME = 286,
-     ENUMERATION_CONSTANT = 287,
-     TYPEDEF = 288,
-     EXTERN = 289,
-     STATIC = 290,
-     AUTO = 291,
-     REGISTER = 292,
-     INLINE = 293,
-     CONST = 294,
-     RESTRICT = 295,
-     VOLATILE = 296,
-     BOOL = 297,
-     CHAR = 298,
-     SHORT = 299,
-     INT = 300,
-     LONG = 301,
-     SIGNED = 302,
-     UNSIGNED = 303,
-     FLOAT = 304,
-     DOUBLE = 305,
-     VOID = 306,
-     COMPLEX = 307,
-     IMAGINARY = 308,
-     STRUCT = 309,
-     UNION = 310,
-     ENUM = 311,
-     ELLIPSIS = 312,
-     CASE = 313,
-     DEFAULT = 314,
-     IF = 315,
-     ELSE = 316,
-     SWITCH = 317,
-     WHILE = 318,
-     DO = 319,
-     FOR = 320,
-     GOTO = 321,
-     CONTINUE = 322,
-     BREAK = 323,
-     RETURN = 324,
-     ALIGNAS = 325,
-     ALIGNOF = 326,
-     ATOMIC = 327,
-     GENERIC = 328,
-     NORETURN = 329,
-     STATIC_ASSERT = 330,
-     THREAD_LOCAL = 331
+     ELIF = 258,
+     PASS = 259,
+     TRY = 260,
+     EXCEPT = 261,
+     PRINT = 262,
+     RANGE = 263,
+     IN = 264,
+     FOREACH = 265,
+     IDENTIFIER = 266,
+     I_CONSTANT = 267,
+     F_CONSTANT = 268,
+     STRING_LITERAL = 269,
+     FUNC_NAME = 270,
+     SIZEOF = 271,
+     PTR_OP = 272,
+     INC_OP = 273,
+     DEC_OP = 274,
+     LEFT_OP = 275,
+     RIGHT_OP = 276,
+     LE_OP = 277,
+     GE_OP = 278,
+     EQ_OP = 279,
+     NE_OP = 280,
+     TH_OP = 281,
+     AND_OP = 282,
+     OR_OP = 283,
+     MUL_ASSIGN = 284,
+     DIV_ASSIGN = 285,
+     MOD_ASSIGN = 286,
+     ADD_ASSIGN = 287,
+     SUB_ASSIGN = 288,
+     LEFT_ASSIGN = 289,
+     RIGHT_ASSIGN = 290,
+     AND_ASSIGN = 291,
+     XOR_ASSIGN = 292,
+     OR_ASSIGN = 293,
+     TYPEDEF_NAME = 294,
+     ENUMERATION_CONSTANT = 295,
+     TYPEDEF = 296,
+     EXTERN = 297,
+     STATIC = 298,
+     AUTO = 299,
+     REGISTER = 300,
+     INLINE = 301,
+     CONST = 302,
+     RESTRICT = 303,
+     VOLATILE = 304,
+     BOOL = 305,
+     CHAR = 306,
+     SHORT = 307,
+     INT = 308,
+     LONG = 309,
+     SIGNED = 310,
+     UNSIGNED = 311,
+     FLOAT = 312,
+     DOUBLE = 313,
+     VOID = 314,
+     COMPLEX = 315,
+     IMAGINARY = 316,
+     STRUCT = 317,
+     UNION = 318,
+     ENUM = 319,
+     ELLIPSIS = 320,
+     CASE = 321,
+     DEFAULT = 322,
+     IF = 323,
+     ELSE = 324,
+     SWITCH = 325,
+     WHILE = 326,
+     DO = 327,
+     FOR = 328,
+     GOTO = 329,
+     CONTINUE = 330,
+     BREAK = 331,
+     RETURN = 332,
+     ALIGNAS = 333,
+     ALIGNOF = 334,
+     ATOMIC = 335,
+     GENERIC = 336,
+     NORETURN = 337,
+     STATIC_ASSERT = 338,
+     THREAD_LOCAL = 339
    };
 #endif
 /* Tokens.  */
-#define IDENTIFIER 258
-#define I_CONSTANT 259
-#define F_CONSTANT 260
-#define STRING_LITERAL 261
-#define FUNC_NAME 262
-#define SIZEOF 263
-#define PTR_OP 264
-#define INC_OP 265
-#define DEC_OP 266
-#define LEFT_OP 267
-#define RIGHT_OP 268
-#define LE_OP 269
-#define GE_OP 270
-#define EQ_OP 271
-#define NE_OP 272
-#define TH_OP 273
-#define AND_OP 274
-#define OR_OP 275
-#define MUL_ASSIGN 276
-#define DIV_ASSIGN 277
-#define MOD_ASSIGN 278
-#define ADD_ASSIGN 279
-#define SUB_ASSIGN 280
-#define LEFT_ASSIGN 281
-#define RIGHT_ASSIGN 282
-#define AND_ASSIGN 283
-#define XOR_ASSIGN 284
-#define OR_ASSIGN 285
-#define TYPEDEF_NAME 286
-#define ENUMERATION_CONSTANT 287
-#define TYPEDEF 288
-#define EXTERN 289
-#define STATIC 290
-#define AUTO 291
-#define REGISTER 292
-#define INLINE 293
-#define CONST 294
-#define RESTRICT 295
-#define VOLATILE 296
-#define BOOL 297
-#define CHAR 298
-#define SHORT 299
-#define INT 300
-#define LONG 301
-#define SIGNED 302
-#define UNSIGNED 303
-#define FLOAT 304
-#define DOUBLE 305
-#define VOID 306
-#define COMPLEX 307
-#define IMAGINARY 308
-#define STRUCT 309
-#define UNION 310
-#define ENUM 311
-#define ELLIPSIS 312
-#define CASE 313
-#define DEFAULT 314
-#define IF 315
-#define ELSE 316
-#define SWITCH 317
-#define WHILE 318
-#define DO 319
-#define FOR 320
-#define GOTO 321
-#define CONTINUE 322
-#define BREAK 323
-#define RETURN 324
-#define ALIGNAS 325
-#define ALIGNOF 326
-#define ATOMIC 327
-#define GENERIC 328
-#define NORETURN 329
-#define STATIC_ASSERT 330
-#define THREAD_LOCAL 331
+#define ELIF 258
+#define PASS 259
+#define TRY 260
+#define EXCEPT 261
+#define PRINT 262
+#define RANGE 263
+#define IN 264
+#define FOREACH 265
+#define IDENTIFIER 266
+#define I_CONSTANT 267
+#define F_CONSTANT 268
+#define STRING_LITERAL 269
+#define FUNC_NAME 270
+#define SIZEOF 271
+#define PTR_OP 272
+#define INC_OP 273
+#define DEC_OP 274
+#define LEFT_OP 275
+#define RIGHT_OP 276
+#define LE_OP 277
+#define GE_OP 278
+#define EQ_OP 279
+#define NE_OP 280
+#define TH_OP 281
+#define AND_OP 282
+#define OR_OP 283
+#define MUL_ASSIGN 284
+#define DIV_ASSIGN 285
+#define MOD_ASSIGN 286
+#define ADD_ASSIGN 287
+#define SUB_ASSIGN 288
+#define LEFT_ASSIGN 289
+#define RIGHT_ASSIGN 290
+#define AND_ASSIGN 291
+#define XOR_ASSIGN 292
+#define OR_ASSIGN 293
+#define TYPEDEF_NAME 294
+#define ENUMERATION_CONSTANT 295
+#define TYPEDEF 296
+#define EXTERN 297
+#define STATIC 298
+#define AUTO 299
+#define REGISTER 300
+#define INLINE 301
+#define CONST 302
+#define RESTRICT 303
+#define VOLATILE 304
+#define BOOL 305
+#define CHAR 306
+#define SHORT 307
+#define INT 308
+#define LONG 309
+#define SIGNED 310
+#define UNSIGNED 311
+#define FLOAT 312
+#define DOUBLE 313
+#define VOID 314
+#define COMPLEX 315
+#define IMAGINARY 316
+#define STRUCT 317
+#define UNION 318
+#define ENUM 319
+#define ELLIPSIS 320
+#define CASE 321
+#define DEFAULT 322
+#define IF 323
+#define ELSE 324
+#define SWITCH 325
+#define WHILE 326
+#define DO 327
+#define FOR 328
+#define GOTO 329
+#define CONTINUE 330
+#define BREAK 331
+#define RETURN 332
+#define ALIGNAS 333
+#define ALIGNOF 334
+#define ATOMIC 335
+#define GENERIC 336
+#define NORETURN 337
+#define STATIC_ASSERT 338
+#define THREAD_LOCAL 339
 
 
 
@@ -202,7 +218,7 @@ typedef union YYSTYPE
 	struct symtab *symp;
 }
 /* Line 1529 of yacc.c.  */
-#line 206 "yapl.tab.h"
+#line 222 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

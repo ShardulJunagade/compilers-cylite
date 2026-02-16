@@ -129,8 +129,11 @@ static int check_type(void);
 "?"					{ return '?'; }
 
 {WS}+					{ /* whitespace separates tokens */ }
-.					{ /* discard bad characters */ }
-
+. {
+    sprintf(buff,"***lexing terminated*** [lexer error]: invalid character '%s'", yytext);
+    yyerror(buff);
+    exit(1);
+}
 %%
 
 int yywrap(void)        /* called at end of input */

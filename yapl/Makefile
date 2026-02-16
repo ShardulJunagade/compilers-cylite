@@ -3,7 +3,8 @@ yapl: y.tab.c lex.yy.c
 	@echo "Run the program as ./yapl [input_file]"
 
 y.tab.c: yapl.y 
-	yacc -d yapl.y
+# 	bison -d yapl.y
+	bison -y -d yapl.y
 
 lex.yy.c: yapl.l y.tab.h
 	lex yapl.l

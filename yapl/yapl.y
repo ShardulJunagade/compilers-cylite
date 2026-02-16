@@ -35,8 +35,7 @@ void yyerror(const char *s);
 
 %start translation_unit
 
-%type <val> IF
-%type <val> ELSE
+
 
 %union
 {
@@ -339,7 +338,6 @@ type_qualifier
 	: CONST
 	| RESTRICT
 	| VOLATILE
-	| ATOMIC
 	;
 
 function_specifier
@@ -353,7 +351,7 @@ alignment_specifier
 	;
 
 declarator
-	: pointer {pointer_decls++;} direct_declarator
+	: pointer direct_declarator {pointer_decls++;}
 	| direct_declarator
 	;
 
@@ -474,13 +472,10 @@ static_assert_declaration
 	: STATIC_ASSERT '(' constant_expression ',' STRING_LITERAL ')' ';'
 	;
 
+
 statement
-	: labeled_statement
-	| compound_statement
-	| expression_statement
-	| selection_statement
-	| iteration_statement
-	| jump_statement
+	: unmatched_statement
+	| matched_statement
 	;
 
 labeled_statement
@@ -509,10 +504,21 @@ expression_statement
 	| expression ';'
 	;
 
-selection_statement
-	: IF '(' expression ')' statement ELSE {ladder_len++;$6=(ladder_len-1);} statement {if(ladder_len>=max){max=ladder_len;} /*printf("ladder_len=%d\n",ladder_len);*/ladder_len=$6;} 
-	| IF '(' expression ')' statement {ifs_wo_else++;}
-	| SWITCH '(' expression ')' statement
+/* Matched / Unmatched statements to resolve dangling-else */
+matched_statement
+	: labeled_statement
+	| compound_statement
+	| expression_statement
+	| iteration_statement
+	| jump_statement
+	| SWITCH '(' expression ')' matched_statement
+	| IF '(' expression ')' matched_statement ELSE matched_statement
+		{ ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--; }
+	;
+
+unmatched_statement
+	: IF '(' expression ')' statement { ifs_wo_else++; }
+	| IF '(' expression ')' matched_statement ELSE unmatched_statement
 	;
 
 iteration_statement
