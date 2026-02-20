@@ -27,8 +27,12 @@ If your system does not have `lex`, you likely have `flex` instead. You can eith
 
 ## Build (recommended)
 
-From this directory:
+Navigate to the directory:
+```sh
+cd cylite
+```
 
+Then run:
 ```sh
 make clean
 make
