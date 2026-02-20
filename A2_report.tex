@@ -139,6 +139,19 @@ These were not strictly required for tokenization, but they came up while keepin
 Running Bison prints one shift/reduce conflict warning in the current parser skeleton.
 This does not affect token dumping, and we plan to clean up any remaining conflicts during A3 when we fully flesh out the grammar.
 
+\section{How to build and run}
+The build uses \texttt{lex} and \texttt{bison}.
+\begin{itemize}
+	\item Build: run \texttt{make} (inside the \texttt{cylite/} folder).
+	\item Token dump (recommended for A2 testing):
+	\begin{lstlisting}
+cd cylite
+make
+gcc -O2 dump_tokens.c lex.yy.c -o dump_tokens
+./dump_tokens tests/keywords.cyl
+	\end{lstlisting}
+\end{itemize}
+
 \section{Testcases}
 All lexer-focused tests are placed under \texttt{tests/}. We ran each testcase using:
 \begin{lstlisting}
@@ -146,7 +159,7 @@ All lexer-focused tests are placed under \texttt{tests/}. We ran each testcase u
 \end{lstlisting}
 
 \paragraph{Interpreting the output.}
-Each output line is \texttt{token\_id<TAB>lexeme}. For single-character tokens (punctuation/operators), the scanner returns the character itself, so the token id is the ASCII code (e.g., \texttt{59\t;} for \texttt{;}). For named tokens (keywords/literals), the numeric ids come from the generated \texttt{y.tab.h} for this build.
+Each output line is \texttt{token\_id<TAB>lexeme}. For single-character tokens (punctuation/operators), the scanner returns the character itself, so the token id is the ASCII code (e.g., \texttt{59} for \texttt{;}). For named tokens (keywords/literals), the numeric ids come from the generated \texttt{y.tab.h} for this build.
 
 \begin{enumerate}
 	\item \texttt{keywords.cyl}
@@ -154,9 +167,9 @@ Each output line is \texttt{token\_id<TAB>lexeme}. For single-character tokens (
 		\item[\textbf{Goal}] Ensure all reserved words (including \lang{} additions) are recognized as keyword tokens rather than identifiers.
 		\item[\textbf{Observed output}]
 		\begin{lstlisting}
-269     "hello"
-"a" "b"
-"line\nbreak"
+323     if
+258     elif
+324     else
 328     for
 326     while
 327     do
@@ -265,6 +278,20 @@ Each output line is \texttt{token\_id<TAB>lexeme}. For single-character tokens (
 		\item[\textbf{Why this is expected}] Only the actual code tokens remain; comment text is fully consumed by the comment rules and never returned to the parser.
 	\end{description}
 
+	\item \texttt{bad\_comments.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Confirm that unterminated \texttt{/*...*/} comments are reported as fatal lexer errors.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+308     int
+266     x
+59      ;
+yyerror: ***lexing terminated*** [lexer error]: ill-formed comment
+exit_code=1
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] If EOF is reached before closing \texttt{*/}, the \texttt{comment()} routine reports an ill-formed comment and terminates.
+	\end{description}
+
 	\item \texttt{extensions.cyl}
 	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
 		\item[\textbf{Goal}] Exercise \lang{}-specific keywords in realistic statement shapes (\texttt{if/elif/else}, \texttt{for-in-range}, \texttt{foreach}, \texttt{try/except}, \texttt{pass}, \texttt{print}).
@@ -348,35 +375,10 @@ exit_code=1
 		\end{lstlisting}
 		\item[\textbf{Why this is expected}] After tokenizing the valid prefix, the catch-all rule \texttt{.} reports the invalid character and terminates immediately (non-zero exit code).
 	\end{description}
-
-	\item \texttt{bad\_comments.cyl}
-	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
-		\item[\textbf{Goal}] Confirm that unterminated \texttt{/*...*/} comments are reported as fatal lexer errors.
-		\item[\textbf{Observed output}]
-		\begin{lstlisting}
-308     int
-266     x
-59      ;
-yyerror: ***lexing terminated*** [lexer error]: ill-formed comment
-exit_code=1
-		\end{lstlisting}
-		\item[\textbf{Why this is expected}] If EOF is reached before closing \texttt{*/}, the \texttt{comment()} routine reports an ill-formed comment and terminates.
-	\end{description}
 \end{enumerate}
 
-\section{How to build and run}
-The build uses \texttt{lex} and \texttt{bison}.
-\begin{itemize}
-	\item Build: run \texttt{make}.
-	\item Token dump (recommended for A2 testing):
-	\begin{lstlisting}
-gcc -O2 dump_tokens.c lex.yy.c -o dump_tokens
-./dump_tokens tests/keywords.cyl
-	\end{lstlisting}
-\end{itemize}
-
-\section{Quick sanity checks (what we verified)}
-We used \texttt{dump\_tokens} to sanity-check the scanner on a few representative files:
+\paragraph{Sanity checks (what we verified).}
+While running the above tests, we specifically sanity-checked a few high-signal cases:
 \begin{itemize}
 	\item \textbf{keywords.cyl:} confirmed that \texttt{elif}, \texttt{try}, \texttt{foreach}, etc. are returned as keyword tokens (not as identifiers).
 	\item \textbf{comments.cyl:} confirmed that \texttt{//...}, \texttt{\#...}, and \texttt{/*...*/} are skipped and do not produce tokens.
@@ -389,6 +391,13 @@ We used \texttt{dump\_tokens} to sanity-check the scanner on a few representativ
 	\item This phase focuses on correct tokenization and lexical error handling.
 	\item The parser/semantic rules for constructs like \texttt{try/except} and \texttt{foreach} will be completed in later assignments.
 \end{itemize}
+
+\section{Conclusion}
+In this assignment, we implemented the \lang{} lexical analyzer using \texttt{lex} and ensured it matches our language specification for keywords, literals, operators/punctuation, and comment styles (including \texttt{\#} single-line comments).
+We also made lexical errors explicit and fatal (invalid characters and unterminated block comments), so incorrect inputs do not silently pass through.
+
+We validated the scanner using a token-dump driver (\texttt{dump\_tokens.c}) and a focused set of test inputs under \texttt{tests/}, which helped us confirm both normal tokenization and error behavior.
+With the lexer stable, the next step is to complete and refine parsing support for the \lang{}-specific constructs during A3.
 
 \end{document}
 

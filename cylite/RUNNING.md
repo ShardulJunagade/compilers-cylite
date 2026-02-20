@@ -1,4 +1,4 @@
-# yapl: How to build, run, and test
+# CYLite: How to build, run, and test
 
 This folder contains a `lex` + `bison/yacc` scanner+parser for a C-like language (“yapl”), along with two kinds of test inputs:
 
