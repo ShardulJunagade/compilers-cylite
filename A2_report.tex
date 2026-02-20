@@ -1,0 +1,394 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{textcomp}
+
+\lstset{upquote=true}
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+\setlist[enumerate]{leftmargin=*,topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+
+\hypersetup{
+	colorlinks=true,
+	linkcolor=black,
+	urlcolor=black,
+	citecolor=black
+}
+
+\lstset{
+	basicstyle=\ttfamily\small,
+	columns=fullflexible,
+	keepspaces=true,
+	frame=single,
+	breaklines=true,
+	showstringspaces=false
+}
+
+\newcommand{\lang}{\textbf{CYLite}}
+
+\title{CS 327: Compilers\\Assignment A2 Report: Lexical Analyzer for \lang}
+\author{Swayam Borate\\(23110066) \and Shardul Junagade\\(23110297) \and Tejas Lohia\\(23110335)}
+\date{20th February 2026}
+
+\begin{document}
+\maketitle
+
+\section{Objective}
+The goal of Assignment A2 is to build a lexical analyzer using \texttt{lex} for our language \lang{}.
+This report summarizes the lexer changes we made to support the keywords and comment rules from our language specification, and how we tested the scanner.
+
+\paragraph{What is a lexical analyzer?}
+A lexical analyzer (or \emph{lexer}) is the first stage of a compiler.
+It reads the source program as a stream of characters and groups them into meaningful units called \emph{tokens} (for example: identifiers, keywords, numbers, string/char literals, operators, and punctuation).
+The parser does not work with raw characters; it works with this token stream.
+
+In practice, a lexer also handles the ``boring but important'' parts: skipping whitespace and comments, and reporting lexical errors early (like an unexpected character or an unterminated comment).
+
+\section{What we built}
+We used a \texttt{lex} specification to recognize tokens for a C-like core (identifiers, operators, punctuation, numeric/string/char literals) and then extended it to handle the \lang{} additions.
+
+For convenient testing, we also used a small driver program (\texttt{dump\_tokens.c}) that repeatedly calls \texttt{yylex()} and prints \texttt{(token\_id, lexeme)} pairs.
+This helped us validate scanning without depending on full parsing.
+
+\section{Summary of changes}
+Starting from the provided C-like scanner skeleton, we updated the lexer and token definitions to match the \lang{} spec (see \texttt{CYLite\_lang\_spec.tex}).
+The main changes were:
+\begin{itemize}
+	\item Added \lang{} keywords: \texttt{elif}, \texttt{pass}, \texttt{try}, \texttt{except}, \texttt{print}, \texttt{range}, \texttt{in}, \texttt{foreach}.
+	\item Added \texttt{\#} as an additional single-line comment starter.
+	\item Made invalid characters a hard lexer error (terminate with a clear message).
+	\item Small updates in the \texttt{yacc}/Bison file so the new keyword tokens exist (keeps the build consistent and helps for A3).
+\end{itemize}
+
+\subsection*{Diff highlights (rules we actually touched)}
+Below is a compact list of the lexer/parser-side edits that show up in the diff.
+\begin{itemize}
+	\item Added scanning rule for \texttt{\#} comments.
+	\item Added scanning rules for each new \lang{} keyword.
+	\item Replaced the generic ``discard bad characters'' rule with an explicit error + exit.
+	\item Declared the new keyword tokens in the parser and added C prototypes for \texttt{yylex}/\texttt{yyerror}.
+	\item Adjusted a few grammar/actions (dangling-else handling, pointer counting action position, and removing \texttt{ATOMIC} from type qualifiers).
+\end{itemize}
+
+\section{Lexer changes (\texttt{lex})}
+\subsection{\texttt{\#} single-line comments}
+In \lang{}, lines starting with \texttt{\#} are treated as comments (no preprocessor support).
+We added a rule to consume the full line, similar to \texttt{//}:
+\begin{lstlisting}
+"//".*      { /* consume //-comment */ }
+"#".*       { /* consume #-comment */ }
+\end{lstlisting}
+
+\subsection{New keywords}
+We added explicit rules for the new reserved words so they return dedicated token types.
+This avoids them being scanned as generic identifiers.
+\begin{lstlisting}
+"elif"      { return ELIF; }
+"pass"      { return PASS; }
+"try"       { return TRY; }
+"except"    { return EXCEPT; }
+"print"     { return PRINT; }
+"range"     { return RANGE; }
+"in"        { return IN; }
+"foreach"   { return FOREACH; }
+\end{lstlisting}
+
+\subsection{Invalid character handling}
+Previously, unknown characters were silently discarded, which can hide bugs in inputs.
+For A2 we changed this to a hard lexer error with an informative message:
+\begin{lstlisting}
+. {
+		sprintf(buff,
+			"***lexing terminated*** [lexer error]: invalid character '%s'",
+			yytext);
+		yyerror(buff);
+		exit(1);
+}
+\end{lstlisting}
+
+\subsection{Unclosed multi-line comments}
+The lexer already handled unclosed \texttt{/* ... */} comments by reporting an ill-formed comment.
+We ensured this path terminates execution so that scanning does not continue past a lexer-fatal error.
+
+The error path is triggered only when the end-of-file is reached before seeing the closing \texttt{*/}.
+
+\section{Token definitions in \texttt{yacc} (build consistency)}
+Even though A2 is focused on scanning, our build produces \texttt{y.tab.h} from Bison/Yacc.
+To keep everything consistent, we declared the new keyword tokens in the parser file:
+\begin{lstlisting}
+%token ELIF PASS TRY EXCEPT PRINT RANGE IN FOREACH
+\end{lstlisting}
+
+We also added prototypes for \texttt{yylex()} and \texttt{yyerror()} at the top of the parser file to avoid implicit-declaration issues with the generated C code.
+
+\subsection*{Other parser-side edits seen in the diff}
+These were not strictly required for tokenization, but they came up while keeping the codebase consistent with \lang{} and while preparing for A3.
+\begin{itemize}
+	\item \textbf{Dangling-else:} the statement grammar was refactored into matched/unmatched forms to reduce ambiguity around \texttt{else}.
+	\item \textbf{Type qualifier cleanup:} \texttt{ATOMIC} was removed from the \texttt{type\_qualifier} production (since it is not part of \lang{}).
+	\item \textbf{Pointer counting action:} the \texttt{pointer\_decls++} action was moved to trigger after recognizing a full pointer declarator.
+\end{itemize}
+
+\paragraph{Note.}
+Running Bison prints one shift/reduce conflict warning in the current parser skeleton.
+This does not affect token dumping, and we plan to clean up any remaining conflicts during A3 when we fully flesh out the grammar.
+
+\section{Testcases}
+All lexer-focused tests are placed under \texttt{tests/}. We ran each testcase using:
+\begin{lstlisting}
+./dump_tokens tests/<name>.cyl
+\end{lstlisting}
+
+\paragraph{Interpreting the output.}
+Each output line is \texttt{token\_id<TAB>lexeme}. For single-character tokens (punctuation/operators), the scanner returns the character itself, so the token id is the ASCII code (e.g., \texttt{59\t;} for \texttt{;}). For named tokens (keywords/literals), the numeric ids come from the generated \texttt{y.tab.h} for this build.
+
+\begin{enumerate}
+	\item \texttt{keywords.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Ensure all reserved words (including \lang{} additions) are recognized as keyword tokens rather than identifiers.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+269     "hello"
+"a" "b"
+"line\nbreak"
+328     for
+326     while
+327     do
+260     try
+261     except
+265     foreach
+264     in
+263     range
+259     pass
+262     print
+308     int
+312     float
+313     double
+306     char
+317     struct
+271     sizeof
+332     return
+331     break
+330     continue
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] Each word is returned as a keyword token id, confirming that the explicit keyword rules in \texttt{yapl.l} take precedence over the generic identifier rule.
+	\end{description}
+
+	\item \texttt{identifiers.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Verify identifier forms (underscores, digits after the first character) and ensure near-keywords are not treated as keywords.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+266     x
+266     _x
+266     x1
+266     abc123
+266     _abc123
+266     intx
+266     rangeVar
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] All inputs match the identifier regex \texttt{{L}{A}*}. Strings like \texttt{intx} and \texttt{rangeVar} do not exactly match reserved words, so they remain identifiers.
+	\end{description}
+
+	\item \texttt{integers.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Confirm integer constants in decimal/octal/hex forms with common suffixes.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+267     0
+267     10
+267     123456
+267     077
+267     0x10
+267     0XFF
+267     10U
+267     10LL
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] All lexemes match one of the integer-constant patterns (hex via \texttt{0[xX]...}, non-zero decimal, or \texttt{0...} octal-style), optionally followed by \texttt{IS} suffixes.
+	\end{description}
+
+	\item \texttt{floats.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Confirm floating constants, including scientific notation and hex floats.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+268     3.14
+268     0.5
+268     10.
+268     1e10
+268     1E-5
+268     0x1.fp3
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] Each lexeme matches one of the float rules (decimal with dot/exponent, or hex float using \texttt{P} exponent), so all are returned as \texttt{F\_CONSTANT}.
+	\end{description}
+
+	\item \texttt{strings.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Validate string literals, escapes, and adjacent string-literal concatenation.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+269     "hello"
+"a" "b"
+"line\nbreak"
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] The string rule in \texttt{yapl.l} accepts one or more adjacent string literals separated by whitespace. Since whitespace includes newlines, multiple physical lines can be captured as a single \texttt{STRING\_LITERAL} token; the extra line breaks are part of the printed lexeme.
+	\end{description}
+
+	\item \texttt{chars.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Validate character literals with escapes.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+267     'a'
+267     '\n'
+267     '\t'
+267     '\\'
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] The character-literal rule accepts either a non-escape character or a valid escape sequence \texttt{ES} between single quotes, so all examples are tokenized as constants.
+	\end{description}
+
+	\item \texttt{comments.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Ensure \texttt{//}, \texttt{\#}, and \texttt{/*...*/} comments are skipped and do not produce tokens.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+308     int
+266     x
+59      ;
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] Only the actual code tokens remain; comment text is fully consumed by the comment rules and never returned to the parser.
+	\end{description}
+
+	\item \texttt{extensions.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Exercise \lang{}-specific keywords in realistic statement shapes (\texttt{if/elif/else}, \texttt{for-in-range}, \texttt{foreach}, \texttt{try/except}, \texttt{pass}, \texttt{print}).
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+323     if
+40      (
+266     x
+41      )
+259     pass
+59      ;
+323     if
+40      (
+266     x
+41      )
+259     pass
+59      ;
+258     elif
+40      (
+266     y
+41      )
+259     pass
+59      ;
+324     else
+259     pass
+59      ;
+328     for
+40      (
+266     i
+264     in
+263     range
+40      (
+267     0
+44      ,
+267     10
+41      )
+41      )
+262     print
+40      (
+266     i
+41      )
+59      ;
+265     foreach
+40      (
+266     x
+264     in
+266     arr
+41      )
+123     {
+262     print
+40      (
+266     x
+41      )
+59      ;
+125     }
+260     try
+123     {
+259     pass
+59      ;
+125     }
+261     except
+123     {
+259     pass
+59      ;
+125     }
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] All extension keywords are returned as dedicated tokens (not identifiers). Punctuation tokens appear with ASCII ids (e.g., \texttt{40} for \texttt{(}, \texttt{123} for \texttt{\{}).
+	\end{description}
+
+	\item \texttt{invalid.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Confirm that invalid characters are not silently ignored.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+308     int
+266     x
+61      =
+267     5
+yyerror: ***lexing terminated*** [lexer error]: invalid character '@'
+exit_code=1
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] After tokenizing the valid prefix, the catch-all rule \texttt{.} reports the invalid character and terminates immediately (non-zero exit code).
+	\end{description}
+
+	\item \texttt{bad\_comments.cyl}
+	\begin{description}[style=nextline,leftmargin=!,labelwidth=3.3cm,align=left]
+		\item[\textbf{Goal}] Confirm that unterminated \texttt{/*...*/} comments are reported as fatal lexer errors.
+		\item[\textbf{Observed output}]
+		\begin{lstlisting}
+308     int
+266     x
+59      ;
+yyerror: ***lexing terminated*** [lexer error]: ill-formed comment
+exit_code=1
+		\end{lstlisting}
+		\item[\textbf{Why this is expected}] If EOF is reached before closing \texttt{*/}, the \texttt{comment()} routine reports an ill-formed comment and terminates.
+	\end{description}
+\end{enumerate}
+
+\section{How to build and run}
+The build uses \texttt{lex} and \texttt{bison}.
+\begin{itemize}
+	\item Build: run \texttt{make}.
+	\item Token dump (recommended for A2 testing):
+	\begin{lstlisting}
+gcc -O2 dump_tokens.c lex.yy.c -o dump_tokens
+./dump_tokens tests/keywords.cyl
+	\end{lstlisting}
+\end{itemize}
+
+\section{Quick sanity checks (what we verified)}
+We used \texttt{dump\_tokens} to sanity-check the scanner on a few representative files:
+\begin{itemize}
+	\item \textbf{keywords.cyl:} confirmed that \texttt{elif}, \texttt{try}, \texttt{foreach}, etc. are returned as keyword tokens (not as identifiers).
+	\item \textbf{comments.cyl:} confirmed that \texttt{//...}, \texttt{\#...}, and \texttt{/*...*/} are skipped and do not produce tokens.
+	\item \textbf{invalid.cyl:} confirmed that an \texttt{@} triggers \texttt{***lexing terminated*** [lexer error]: invalid character '@'}.
+	\item \textbf{bad\_comments.cyl:} confirmed that an unclosed \texttt{/* ...} triggers \texttt{***lexing terminated*** [lexer error]: ill-formed comment}.
+\end{itemize}
+
+\section{Current limitations (A2 scope)}
+\begin{itemize}
+	\item This phase focuses on correct tokenization and lexical error handling.
+	\item The parser/semantic rules for constructs like \texttt{try/except} and \texttt{foreach} will be completed in later assignments.
+\end{itemize}
+
+\end{document}
+

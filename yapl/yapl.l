@@ -161,6 +161,7 @@ static void comment(void)
 	sprintf(buff,"***lexing terminated*** [lexer error]: ill-formed comment");
 	mode=0;
     yyerror(buff);
+    exit(1);
 }
 
 static int check_type(void)
