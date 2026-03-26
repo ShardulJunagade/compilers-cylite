@@ -1,0 +1,14 @@
+if (x) pass;
+if (x) pass; elif (y) pass; else pass;
+
+for (i in range(0,10)) print(i);
+
+foreach(x in arr) {
+    print(x);
+}
+
+try {
+    pass;
+} except {
+    pass;
+}
