@@ -38,6 +38,7 @@ extern int sym_type(const char *);  /* returns type from symbol table */
 
 static void comment(void);
 static int check_type(void);
+static void count_newlines(const char *text);
 %}
 
 %%
@@ -128,7 +129,7 @@ static int check_type(void);
 "|"					{ return '|'; }
 "?"					{ return '?'; }
 
-{WS}+					{ /* whitespace separates tokens */ }
+{WS}+					{ count_newlines(yytext); /* whitespace separates tokens */ }
 . {
     sprintf(buff,"***lexing terminated*** [lexer error]: invalid character '%s'", yytext);
     yyerror(buff);
@@ -146,10 +147,17 @@ static void comment(void)
     int c;
 
     while ((c = input()) != 0)
+    {
+        if (c == '\n')
+            ++yylineno;
+
         if (c == '*')
         {
             while ((c = input()) == '*')
                 ;
+
+            if (c == '\n')
+                ++yylineno;
 
             if (c == '/')
                 return;
@@ -157,11 +165,23 @@ static void comment(void)
             if (c == 0)
                 break;
         }
+    }
 
 	sprintf(buff,"***lexing terminated*** [lexer error]: ill-formed comment");
 	mode=0;
     yyerror(buff);
     exit(1);
+}
+
+static void count_newlines(const char *text)
+{
+	const char *p = text;
+	while (*p != '\0')
+	{
+		if (*p == '\n')
+			++yylineno;
+		++p;
+	}
 }
 
 static int check_type(void)

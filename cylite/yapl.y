@@ -1,7 +1,12 @@
 
 %{
 #include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+
 extern char *yytext;
+extern int yylineno;
+
 int global_declarations=0;
 int func_definitions=0;
 int int_consts=0;
@@ -9,6 +14,14 @@ int pointer_decls=0;
 int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
+
+#define MAX_DERIVATION_STEPS 200000
+static char *derivation_steps[MAX_DERIVATION_STEPS];
+static int derivation_count = 0;
+
+static void record_derivation(const char *rule);
+static void print_reverse_derivation(void);
+static void free_derivation_steps(void);
 
 /* Prototypes for lexer and error handler so generated parser sees them */
 int yylex(void);
@@ -475,18 +488,34 @@ static_assert_declaration
 
 statement
 	: unmatched_statement
+		{ record_derivation("statement -> unmatched_statement"); }
 	| matched_statement
+		{ record_derivation("statement -> matched_statement"); }
 	;
 
-labeled_statement
-	: IDENTIFIER ':' statement
-	| CASE constant_expression ':' statement
-	| DEFAULT ':' statement
+matched_labeled_statement
+	: IDENTIFIER ':' matched_statement
+		{ record_derivation("matched_labeled_statement -> IDENTIFIER : matched_statement"); }
+	| CASE constant_expression ':' matched_statement
+		{ record_derivation("matched_labeled_statement -> CASE constant_expression : matched_statement"); }
+	| DEFAULT ':' matched_statement
+		{ record_derivation("matched_labeled_statement -> DEFAULT : matched_statement"); }
+	;
+
+unmatched_labeled_statement
+	: IDENTIFIER ':' unmatched_statement
+		{ record_derivation("unmatched_labeled_statement -> IDENTIFIER : unmatched_statement"); }
+	| CASE constant_expression ':' unmatched_statement
+		{ record_derivation("unmatched_labeled_statement -> CASE constant_expression : unmatched_statement"); }
+	| DEFAULT ':' unmatched_statement
+		{ record_derivation("unmatched_labeled_statement -> DEFAULT : unmatched_statement"); }
 	;
 
 compound_statement
 	: '{' '}'
+		{ record_derivation("compound_statement -> { }"); }
 	| '{'  block_item_list '}'
+		{ record_derivation("compound_statement -> { block_item_list }"); }
 	;
 
 block_item_list
@@ -501,56 +530,169 @@ block_item
 
 expression_statement
 	: ';'
+		{ record_derivation("expression_statement -> ;"); }
 	| expression ';'
+		{ record_derivation("expression_statement -> expression ;"); }
 	;
 
-/* Matched / Unmatched statements to resolve dangling-else */
-matched_statement
-	: labeled_statement
-	| compound_statement
+/* Matched / Unmatched statements to resolve dangling-else (including labels). */
+non_if_statement
+	: compound_statement
+		{ record_derivation("non_if_statement -> compound_statement"); }
 	| expression_statement
-	| iteration_statement
+		{ record_derivation("non_if_statement -> expression_statement"); }
+	| matched_iteration_statement
+		{ record_derivation("non_if_statement -> matched_iteration_statement"); }
 	| jump_statement
-	| SWITCH '(' expression ')' matched_statement
+		{ record_derivation("non_if_statement -> jump_statement"); }
+	| PASS ';'
+		{ record_derivation("non_if_statement -> PASS ;"); }
+	| PRINT '(' ')' ';'
+		{ record_derivation("non_if_statement -> PRINT ( ) ;"); }
+	| PRINT '(' argument_expression_list ')' ';'
+		{ record_derivation("non_if_statement -> PRINT ( argument_expression_list ) ;"); }
+	| TRY compound_statement EXCEPT compound_statement
+		{ record_derivation("non_if_statement -> TRY compound_statement EXCEPT compound_statement"); }
+	| FOREACH '(' IDENTIFIER IN expression ')' matched_statement
+		{ record_derivation("non_if_statement -> FOREACH ( IDENTIFIER IN expression ) matched_statement"); }
+	| FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' matched_statement
+		{ record_derivation("non_if_statement -> FOR ( IDENTIFIER IN RANGE ( assignment_expression , assignment_expression ) ) matched_statement"); }
+	;
+
+matched_statement
+	: matched_labeled_statement
+		{ record_derivation("matched_statement -> matched_labeled_statement"); }
+	| non_if_statement
+		{ record_derivation("matched_statement -> non_if_statement"); }
 	| IF '(' expression ')' matched_statement ELSE matched_statement
-		{ ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--; }
+		{
+			record_derivation("matched_statement -> IF ( expression ) matched_statement ELSE matched_statement");
+			ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--;
+		}
+	| IF '(' expression ')' matched_statement elif_matched_list ELSE matched_statement
+		{
+			record_derivation("matched_statement -> IF ( expression ) matched_statement elif_matched_list ELSE matched_statement");
+			ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--;
+		}
+	| SWITCH '(' expression ')' matched_statement
+		{ record_derivation("matched_statement -> SWITCH ( expression ) matched_statement"); }
+	;
+
+elif_matched_list
+	: ELIF '(' expression ')' matched_statement elif_matched_list_tail
+		{ record_derivation("elif_matched_list -> ELIF ( expression ) matched_statement elif_matched_list_tail"); }
+	;
+
+elif_matched_list_tail
+	: /* empty */
+		{ record_derivation("elif_matched_list_tail -> epsilon"); }
+	| ELIF '(' expression ')' matched_statement elif_matched_list_tail
+		{ record_derivation("elif_matched_list_tail -> ELIF ( expression ) matched_statement elif_matched_list_tail"); }
+	;
+
+elif_unmatched_tail
+	: ELIF '(' expression ')' statement
+		{ record_derivation("elif_unmatched_tail -> ELIF ( expression ) statement"); }
+	| ELIF '(' expression ')' matched_statement elif_unmatched_tail
+		{ record_derivation("elif_unmatched_tail -> ELIF ( expression ) matched_statement elif_unmatched_tail"); }
 	;
 
 unmatched_statement
-	: IF '(' expression ')' statement { ifs_wo_else++; }
+	: unmatched_labeled_statement
+		{ record_derivation("unmatched_statement -> unmatched_labeled_statement"); }
+	| IF '(' expression ')' statement
+		{
+			record_derivation("unmatched_statement -> IF ( expression ) statement");
+			ifs_wo_else++;
+		}
+	| IF '(' expression ')' matched_statement elif_unmatched_tail
+		{ record_derivation("unmatched_statement -> IF ( expression ) matched_statement elif_unmatched_tail"); }
 	| IF '(' expression ')' matched_statement ELSE unmatched_statement
+		{ record_derivation("unmatched_statement -> IF ( expression ) matched_statement ELSE unmatched_statement"); }
+	| IF '(' expression ')' matched_statement elif_matched_list ELSE unmatched_statement
+		{ record_derivation("unmatched_statement -> IF ( expression ) matched_statement elif_matched_list ELSE unmatched_statement"); }
+	| SWITCH '(' expression ')' unmatched_statement
+		{ record_derivation("unmatched_statement -> SWITCH ( expression ) unmatched_statement"); }
+	| unmatched_iteration_statement
+		{ record_derivation("unmatched_statement -> unmatched_iteration_statement"); }
+	| FOREACH '(' IDENTIFIER IN expression ')' unmatched_statement
+		{ record_derivation("unmatched_statement -> FOREACH ( IDENTIFIER IN expression ) unmatched_statement"); }
+	| FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' unmatched_statement
+		{ record_derivation("unmatched_statement -> FOR ( IDENTIFIER IN RANGE ( assignment_expression , assignment_expression ) ) unmatched_statement"); }
 	;
 
-iteration_statement
-	: WHILE '(' expression ')' statement
-	| DO statement WHILE '(' expression ')' ';'
-	| FOR '(' expression_statement expression_statement ')' statement
-	| FOR '(' expression_statement expression_statement expression ')' statement
-	| FOR '(' declaration expression_statement ')' statement
-	| FOR '(' declaration expression_statement expression ')' statement
+
+matched_iteration_statement
+	: WHILE '(' expression ')' matched_statement
+		{ record_derivation("matched_iteration_statement -> WHILE ( expression ) matched_statement"); }
+	| DO matched_statement WHILE '(' expression ')' ';'
+		{ record_derivation("matched_iteration_statement -> DO matched_statement WHILE ( expression ) ;"); }
+	| FOR '(' expression_statement expression_statement ')' matched_statement
+		{ record_derivation("matched_iteration_statement -> FOR ( expression_statement expression_statement ) matched_statement"); }
+	| FOR '(' expression_statement expression_statement expression ')' matched_statement
+		{ record_derivation("matched_iteration_statement -> FOR ( expression_statement expression_statement expression ) matched_statement"); }
+	| FOR '(' declaration expression_statement ')' matched_statement
+		{ record_derivation("matched_iteration_statement -> FOR ( declaration expression_statement ) matched_statement"); }
+	| FOR '(' declaration expression_statement expression ')' matched_statement
+		{ record_derivation("matched_iteration_statement -> FOR ( declaration expression_statement expression ) matched_statement"); }
+	;
+
+unmatched_iteration_statement
+	: WHILE '(' expression ')' unmatched_statement
+		{ record_derivation("unmatched_iteration_statement -> WHILE ( expression ) unmatched_statement"); }
+	| DO unmatched_statement WHILE '(' expression ')' ';'
+		{ record_derivation("unmatched_iteration_statement -> DO unmatched_statement WHILE ( expression ) ;"); }
+	| FOR '(' expression_statement expression_statement ')' unmatched_statement
+		{ record_derivation("unmatched_iteration_statement -> FOR ( expression_statement expression_statement ) unmatched_statement"); }
+	| FOR '(' expression_statement expression_statement expression ')' unmatched_statement
+		{ record_derivation("unmatched_iteration_statement -> FOR ( expression_statement expression_statement expression ) unmatched_statement"); }
+	| FOR '(' declaration expression_statement ')' unmatched_statement
+		{ record_derivation("unmatched_iteration_statement -> FOR ( declaration expression_statement ) unmatched_statement"); }
+	| FOR '(' declaration expression_statement expression ')' unmatched_statement
+		{ record_derivation("unmatched_iteration_statement -> FOR ( declaration expression_statement expression ) unmatched_statement"); }
 	;
 
 jump_statement
 	: GOTO IDENTIFIER ';'
+		{ record_derivation("jump_statement -> GOTO IDENTIFIER ;"); }
 	| CONTINUE ';'
+		{ record_derivation("jump_statement -> CONTINUE ;"); }
 	| BREAK ';'
+		{ record_derivation("jump_statement -> BREAK ;"); }
 	| RETURN ';'
+		{ record_derivation("jump_statement -> RETURN ;"); }
 	| RETURN expression ';'
+		{ record_derivation("jump_statement -> RETURN expression ;"); }
 	;
 
 translation_unit
-	: external_declaration {global_declarations++;}
-	| translation_unit external_declaration {global_declarations++;}
+	: external_declaration
+		{
+			record_derivation("translation_unit -> external_declaration");
+			global_declarations++;
+		}
+	| translation_unit external_declaration
+		{
+			record_derivation("translation_unit -> translation_unit external_declaration");
+			global_declarations++;
+		}
 	;
 
 external_declaration
-	: function_definition {func_definitions++;}
+	: function_definition
+		{
+			record_derivation("external_declaration -> function_definition");
+			func_definitions++;
+		}
 	| declaration
+		{ record_derivation("external_declaration -> declaration"); }
 	;
 
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
+		{ record_derivation("function_definition -> declaration_specifiers declarator declaration_list compound_statement"); }
 	| declaration_specifiers declarator compound_statement
+		{ record_derivation("function_definition -> declaration_specifiers declarator compound_statement"); }
 	;
 
 declaration_list
@@ -559,10 +701,6 @@ declaration_list
 	;
 
 %%
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 char buff[2048];
 
 int yylex(void);
@@ -573,11 +711,53 @@ void yyerror(const char *s)
 	fflush(stdout);
 	
 	if(mode==-1)
-		printf("***parsing terminated*** [syntax error]\n");
+	{
+		if (s && strstr(s, "syntax error") != NULL)
+			printf("***parsing terminated*** [syntax error] at line %d near token \"%s\"\nDetails: %s\n", yylineno, (yytext && yytext[0] != '\0') ? yytext : "<end-of-input>", s);
+		else
+			printf("***parsing terminated*** [syntax error] at line %d near token \"%s\"\n", yylineno, (yytext && yytext[0] != '\0') ? yytext : "<end-of-input>");
+	}
 	else if(mode==0 || mode==1)
 		printf("%s\n",s);
 		
+	free_derivation_steps();
 	exit(-1);
+}
+
+static void record_derivation(const char *rule)
+{
+	if (derivation_count >= MAX_DERIVATION_STEPS)
+		return;
+
+	derivation_steps[derivation_count] = strdup(rule);
+	if (derivation_steps[derivation_count] != NULL)
+		derivation_count++;
+}
+
+static void print_reverse_derivation(void)
+{
+	int i;
+
+	printf("=== Reverse Derivation (high-level reductions) ===\n");
+	if (derivation_count == 0)
+	{
+		printf("(no derivation steps recorded)\n");
+		return;
+	}
+
+	for (i = derivation_count - 1; i >= 0; --i)
+		printf("%s\n", derivation_steps[i]);
+}
+
+static void free_derivation_steps(void)
+{
+	int i;
+	for (i = 0; i < derivation_count; ++i)
+	{
+		free(derivation_steps[i]);
+		derivation_steps[i] = NULL;
+	}
+	derivation_count = 0;
 }
 
 int main(int argc, char **argv)
@@ -617,6 +797,8 @@ int main(int argc, char **argv)
 	printf("#pointers_declarations = %d\n",pointer_decls);
 	printf("#ifs_without_else = %d\n",ifs_wo_else);
 	printf("if-else max-depth = %d\n",((max<0)?0:max));
+	print_reverse_derivation();
+	free_derivation_steps();
 
 	return(0);
 }
