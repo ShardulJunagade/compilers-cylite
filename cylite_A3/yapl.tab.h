@@ -135,7 +135,8 @@ extern int yydebug;
     GENERIC = 336,                 /* GENERIC  */
     NORETURN = 337,                /* NORETURN  */
     STATIC_ASSERT = 338,           /* STATIC_ASSERT  */
-    THREAD_LOCAL = 339             /* THREAD_LOCAL  */
+    THREAD_LOCAL = 339,            /* THREAD_LOCAL  */
+    LOWER_THAN_ELSE = 340          /* LOWER_THAN_ELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -144,12 +145,12 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 40 "yapl.y"
+#line 47 "yapl.y"
 
 	int val;
 	struct symtab *symp;
 
-#line 153 "yapl.tab.h"
+#line 154 "yapl.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

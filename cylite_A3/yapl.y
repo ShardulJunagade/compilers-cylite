@@ -27,14 +27,21 @@ int max=-1;
 %token	COMPLEX IMAGINARY 
 %token	STRUCT UNION ENUM ELLIPSIS
 
-%token	CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+%token <val> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
+/* Precedence for Comma to fix the Reduce/Reduce conflict */
+%left ','
+
+/* Precedence for If/Elif/Else to fix the Shift/Reduce conflicts */
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELIF
+%nonassoc ELSE
+
 %start translation_unit
 
-%type <val> IF
-%type <val> ELSE
+
 
 %union
 {
