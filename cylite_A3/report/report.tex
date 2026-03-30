@@ -1,0 +1,192 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{lmodern}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{graphicx}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge \textbf{CYLite Compiler Project} \par}
+    \vspace{0.5cm}
+    {\Large \textbf{Language Specification and Grammar Modifications Report} \par}
+    
+    \vspace{3cm}
+    
+    {\Large \textbf{Authors:} \par}
+    \vspace{0.3cm}
+    {\Large Tejas Lohia \par} % You can edit your name or add your partner's name here
+    {\Large [Shardul Junagade / 23110297] \par} 
+    {\Large [Swayam Borate / 23110066] \par} 
+    
+    \vspace{2cm}
+    {\large \textbf{CS327 Compilers - Lab Assignment} \par}
+    
+    \vfill
+    
+    {\large \today \par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\setstretch{1.4}
+\section{Introduction}
+
+The landscape of programming languages has long been divided between highly performant, statically typed systems languages like C, and highly expressive, dynamically typed scripting languages like Python. C provides unparalleled control over hardware and memory layout, executing with optimal efficiency. However, its syntax can be unforgiving; error handling relies heavily on cumbersome return codes, control flow can become deeply nested and difficult to read, and iterative constructs often lead to off-by-one errors. Conversely, Python offers ergonomic syntax, explicit error handling blocks, and intuitive looping mechanisms, but at the cost of execution speed and strict compile-time type safety. 
+
+CYLite represents a modern hybridization of these two paradigms. It is designed as an extension of the YAPL (Yet Another Programming Language) baseline compiler, effectively injecting Python-inspired syntactic sugar and control flow structures into a C-style language grammar. The fundamental motivation behind CYLite is to provide developers with the readability and expressiveness of modern high-level languages without sacrificing the structural rigor of a statically compiled environment. 
+
+Developing a formal grammar for CYLite requires adapting these high-level programming concepts into a strictly unambiguous LALR(1) framework compatible with compiler generation tools like GNU Bison. By integrating these features directly at the lexical and grammatical level—rather than relying on standard library macros or external subroutines—the compiler pipeline can elevate them to first-class citizens in the language. This allows the compiler front-end to perform rigorous syntax checking, generate more optimized Abstract Syntax Trees (ASTs), and produce clearer compile-time error messages tailored to the programmer's explicit intent. 
+
+This project focused heavily on redefining the parser rules (\texttt{yapl.y}) to accommodate these new grammatical structures. By modifying the base YAPL grammar, we introduced several new nonterminal rules and shifted existing expressions to handle newly introduced keywords. Specifically, the grammar now natively understands chained conditional blocks (via \texttt{elif}), explicit null operations (via \texttt{pass}), native I/O primitives (\texttt{print}), ergonomic loop iterators (\texttt{foreach} and \texttt{in range}), and block-scoped error encapsulation (\texttt{try-except}). 
+
+This structural evolution ensures that CYLite can parse declarative flow states seamlessly while resolving dangling-else ambiguities and iteration pitfalls inherent to older grammars. This report breaks down the philosophy behind each addition and details the exact grammatical transformations applied to achieve the CYLite language specification.
+
+\singlespacing
+
+\section{Grammar Modifications}
+
+To implement the CYLite language extensions, the lexical analyzer (generated via Flex) was first updated to recognize new keywords and allocate corresponding tokens. The parser (\texttt{yapl.y}) was subsequently heavily modified to integrate these new tokens into valid syntax trees.
+
+\subsection{Lexical Additions (Tokens)}
+We introduced the following terminal tokens into the parser to represent the core vocabulary of the new language features:
+\begin{itemize}
+    \item \texttt{ELIF}, \texttt{PASS}, \texttt{TRY}, \texttt{EXCEPT}, \texttt{PRINT}, \texttt{RANGE}, \texttt{IN}, \texttt{FOREACH}
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    % Replace the placeholder below with your actual image filename
+    \includegraphics[width=0.8\textwidth]{Images/imgh1.jpeg}
+    \caption{Implementation of the new CYLite tokens in the lexical analyzer.}
+    \label{fig:lexical_tokens}
+\end{figure}
+
+
+\subsection{The \texttt{elif} Conditional Construct}
+In standard C, chaining conditionals requires either deeply nested \texttt{else \{ if (...) \}} blocks or the `\texttt{else if}' syntax, which is grammatically just an \texttt{else} block containing a single \texttt{if} statement. In complex logical branching, this can disrupt readability and complicate AST generation due to classic dangling-else ambiguities. Python’s \texttt{elif} provides a unified, first-class construct for multi-way branching without artificial nesting.
+
+
+\textbf{Grammar Change:} We defined a new nonterminal \texttt{elif\_list} to explicitly handle zero or more \texttt{elif} branches recursively. We then expanded \texttt{selection\_statement} to support an \texttt{if} block followed optionally by an \texttt{elif\_list} and a final optional \texttt{else}.
+
+\begin{verbatim}
+elif_list
+    : ELIF '(' expression ')' statement
+    | elif_list ELIF '(' expression ')' statement
+    ;
+
+selection_statement
+    : IF '(' expression ')' statement ELSE statement
+    | IF '(' expression ')' statement
+    | IF '(' expression ')' statement elif_list ELSE statement
+    | IF '(' expression ')' statement elif_list
+    ...
+\end{verbatim}
+
+\subsection{Native Error Handling: \texttt{try-except}}
+Error handling in C typically falls back to checking integer return codes after every function call, or using precarious \texttt{setjmp/longjmp} chains for global exits. Modern languages isolate fragile code within explicit boundaries, redirecting failures to localized catch blocks. By implementing \texttt{try-except} directly in the CYLite grammar, we establish dedicated scope blocks for execution and recovery, allowing the backend to map these to structured, object-level exception-handling routines.
+
+\textbf{Grammar Change:} We introduced a \texttt{try\_except\_statement} combining the \texttt{TRY} keyword, a localized block (\texttt{compound\_statement}), the \texttt{EXCEPT} keyword, and its associative block. This nonterminal was then injected into the overarching \texttt{statement} rule.
+
+\begin{verbatim}
+try_except_statement
+    : TRY compound_statement EXCEPT compound_statement
+    ;
+
+statement
+    ...
+    | try_except_statement
+\end{verbatim}
+
+\subsection{Ergonomic Iteration: \texttt{foreach} and \texttt{in range}}
+
+Classic C \texttt{for} loops require boilerplate initialization, condition checking, and manual incrementation (e.g., \texttt{for(int i=0; i<10; i++)}). This pattern is verbose and inherently prone to off-by-one errors. CYLite adopts \texttt{foreach id in enumerable} and \texttt{for(id in range(a, b))} to abstract the iteration boilerplate. This makes the programmer's intent purely declarative rather than imperative, preventing out-of-bounds complications.
+
+\textbf{Grammar Change:} The \texttt{iteration\_statement} nonterminal was expanded to natively parse these specialized loops, tying identifiers directly to iterable sequences and mathematical ranges.
+
+\begin{verbatim}
+iteration_statement
+    ...
+    | FOR '(' IDENTIFIER IN RANGE '(' expression ',' expression ')' ')' statement
+    | FOREACH '(' IDENTIFIER IN expression ')' compound_statement
+\end{verbatim}
+
+\subsection{The explicit \texttt{pass} Operation}
+
+In standard C, an intentionally empty block or stubbed function is written as an empty curly block \texttt{\{\}} or a lone semicolon \texttt{;}. This is visually ambiguous—compilers and semantic linters regularly flag it as a probable mistake. Promoting the explicit \texttt{pass} keyword provides an unambiguous syntactic placeholder, asserting that the empty block is intentional.
+
+\textbf{Grammar Change:} \texttt{PASS ';'} was added directly as a terminal production alternative within the \texttt{statement} rule.
+
+\begin{verbatim}
+statement
+    ...
+    | PASS ';'
+\end{verbatim}
+
+\subsection{First-Class \texttt{print} Built-in}
+
+Rather than relying exclusively on importing \texttt{stdio.h} to use the variadic \texttt{printf} function—which requires cumbersome format strings and type awareness—CYLite promotes basic output to a native built-in language feature. By integrating it into the grammar, \texttt{print} can be more strictly type-checked or implicitly optimized for polymorphic output at compile-time by the parser's AST builder without requiring external linkage headers.
+
+\textbf{Grammar Change:} The \texttt{print} construct was appended defensively to \texttt{postfix\_expression}, supporting both empty calls and list arguments.
+
+\begin{verbatim}
+postfix_expression
+    ...
+    | PRINT '(' ')'
+    | PRINT '(' argument_expression_list ')'
+\end{verbatim}
+
+\subsection{Results}
+The integration of these advanced features required careful consideration of LALR(1) parsing constraints to avoid shift/reduce and reduce/reduce conflicts within the Bison generator framework. By directly extending the \texttt{yapl.y} grammar definitions, CYLite successfully bridges the architectural gap between systems programming and scripting conveniences. Developers can now write highly readable, python-inspired code while leaning on the reliable, rigorous syntax-checking rules inherent to a C-like toolchain.
+
+\newpage
+\section{Automaton Generation and Initial Analysis}
+
+To construct the LALR(1) item sets and build the parser automaton (fulfilling Part 1 of the assignment requirements), we processed the modified \texttt{yapl.y} grammar file using GNU Bison.
+
+\subsection{Bison Invocation and Outputs}
+The parser generator was invoked using the following command:
+\begin{verbatim}
+$ bison -v -d yapl.y
+\end{verbatim}
+
+This command utilizes two critical flags:
+\begin{itemize}
+    \item \textbf{\texttt{-d}:} Generates the \texttt{yapl.tab.h} header file, which exposes the newly defined CYLite terminal tokens (e.g., \texttt{ELIF}, \texttt{FOREACH}, \texttt{TRY}) to the Flex lexical analyzer.
+    \item \textbf{\texttt{-v} (Verbose):} Instructs Bison to generate a detailed \texttt{yapl.output} file. This file is crucial as it contains the human-readable representation of every LALR(1) item set and the complete state transition graph for the automaton.
+\end{itemize}
+
+\subsection{Initial LALR(1) Automaton Analysis}
+The generation process successfully constructed the LALR(1) automaton required to parse the CYLite language specification. An initial analysis of the generated \texttt{yapl.output} report reveals the following structural metrics regarding the grammar's complexity:
+\begin{itemize}
+    \item \textbf{Grammar Rules:} The parser implements over 130 distinct production rules to encapsulate both the core C-style expressions and the advanced CYLite extensions.
+    \item \textbf{Item Sets (States):} The resulting LALR(1) automaton consists of 522 distinct states (item sets). This large state space is a direct result of the complex expression precedence and the newly introduced deeply nested control structures (such as \texttt{try-except} and \texttt{elif} ladders).
+\end{itemize}
+
+While the item sets and state machine were successfully compiled, the integration of optional branching (specifically the \texttt{elif} and \texttt{else} derivations) and ambiguous operator precedence introduced non-determinism into the parsing table. The initial Bison compilation reported exactly \textbf{6 shift/reduce conflicts} and \textbf{1 reduce/reduce conflict}. The identification, isolation, and resolution of these conflicts are documented in the following section.
+
+
+\subsection{Conflict Identification and Resolution}
+
+As noted in the initial automaton analysis, the introduction of CYLite's advanced control structures—specifically the \texttt{elif} ladders and optional \texttt{else} blocks—introduced non-determinism into the LALR(1) parsing table. When processed by GNU Bison, the grammar generated exactly 6 shift/reduce conflicts and 1 reduce/reduce conflict. 
+
+To satisfy the structural rigor required by the compiler front-end, we must isolate the specific item sets where the automaton encounters multiple valid transition paths, identify the conflicting productions, and apply deterministic precedence rules to resolve them.
+
+\subsection{Shift/Reduce Conflicts: The Dangling-Else and \texttt{elif} Ambiguity}
+% [We will insert the specific State from yapl.output and our explanation here]
+
+\subsection{Reduce/Reduce Conflict Analysis}
+% [We will insert the specific State from yapl.output and our explanation here]
+
+\subsection{Conflict Resolution and Grammar Modifications}
+% [We will document the %nonassoc fixes and show the before/after parsing examples here]
+\end{document}
