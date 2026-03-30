@@ -81,7 +81,7 @@ int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
 
-#line 85 "yapl.tab.c"
+#line 85 "y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -104,7 +104,227 @@ int max=-1;
 #  endif
 # endif
 
-#include "yapl.tab.h"
+/* Use api.header.include to #include this header
+   instead of duplicating it here.  */
+#ifndef YY_YY_Y_TAB_H_INCLUDED
+# define YY_YY_Y_TAB_H_INCLUDED
+/* Debug traces.  */
+#ifndef YYDEBUG
+# define YYDEBUG 0
+#endif
+#if YYDEBUG
+extern int yydebug;
+#endif
+
+/* Token kinds.  */
+#ifndef YYTOKENTYPE
+# define YYTOKENTYPE
+  enum yytokentype
+  {
+    YYEMPTY = -2,
+    YYEOF = 0,                     /* "end of file"  */
+    YYerror = 256,                 /* error  */
+    YYUNDEF = 257,                 /* "invalid token"  */
+    ELIF = 258,                    /* ELIF  */
+    PASS = 259,                    /* PASS  */
+    TRY = 260,                     /* TRY  */
+    EXCEPT = 261,                  /* EXCEPT  */
+    PRINT = 262,                   /* PRINT  */
+    RANGE = 263,                   /* RANGE  */
+    IN = 264,                      /* IN  */
+    FOREACH = 265,                 /* FOREACH  */
+    IDENTIFIER = 266,              /* IDENTIFIER  */
+    I_CONSTANT = 267,              /* I_CONSTANT  */
+    F_CONSTANT = 268,              /* F_CONSTANT  */
+    STRING_LITERAL = 269,          /* STRING_LITERAL  */
+    FUNC_NAME = 270,               /* FUNC_NAME  */
+    SIZEOF = 271,                  /* SIZEOF  */
+    PTR_OP = 272,                  /* PTR_OP  */
+    INC_OP = 273,                  /* INC_OP  */
+    DEC_OP = 274,                  /* DEC_OP  */
+    LEFT_OP = 275,                 /* LEFT_OP  */
+    RIGHT_OP = 276,                /* RIGHT_OP  */
+    LE_OP = 277,                   /* LE_OP  */
+    GE_OP = 278,                   /* GE_OP  */
+    EQ_OP = 279,                   /* EQ_OP  */
+    NE_OP = 280,                   /* NE_OP  */
+    TH_OP = 281,                   /* TH_OP  */
+    AND_OP = 282,                  /* AND_OP  */
+    OR_OP = 283,                   /* OR_OP  */
+    MUL_ASSIGN = 284,              /* MUL_ASSIGN  */
+    DIV_ASSIGN = 285,              /* DIV_ASSIGN  */
+    MOD_ASSIGN = 286,              /* MOD_ASSIGN  */
+    ADD_ASSIGN = 287,              /* ADD_ASSIGN  */
+    SUB_ASSIGN = 288,              /* SUB_ASSIGN  */
+    LEFT_ASSIGN = 289,             /* LEFT_ASSIGN  */
+    RIGHT_ASSIGN = 290,            /* RIGHT_ASSIGN  */
+    AND_ASSIGN = 291,              /* AND_ASSIGN  */
+    XOR_ASSIGN = 292,              /* XOR_ASSIGN  */
+    OR_ASSIGN = 293,               /* OR_ASSIGN  */
+    TYPEDEF_NAME = 294,            /* TYPEDEF_NAME  */
+    ENUMERATION_CONSTANT = 295,    /* ENUMERATION_CONSTANT  */
+    TYPEDEF = 296,                 /* TYPEDEF  */
+    EXTERN = 297,                  /* EXTERN  */
+    STATIC = 298,                  /* STATIC  */
+    AUTO = 299,                    /* AUTO  */
+    REGISTER = 300,                /* REGISTER  */
+    INLINE = 301,                  /* INLINE  */
+    CONST = 302,                   /* CONST  */
+    RESTRICT = 303,                /* RESTRICT  */
+    VOLATILE = 304,                /* VOLATILE  */
+    BOOL = 305,                    /* BOOL  */
+    CHAR = 306,                    /* CHAR  */
+    SHORT = 307,                   /* SHORT  */
+    INT = 308,                     /* INT  */
+    LONG = 309,                    /* LONG  */
+    SIGNED = 310,                  /* SIGNED  */
+    UNSIGNED = 311,                /* UNSIGNED  */
+    FLOAT = 312,                   /* FLOAT  */
+    DOUBLE = 313,                  /* DOUBLE  */
+    VOID = 314,                    /* VOID  */
+    COMPLEX = 315,                 /* COMPLEX  */
+    IMAGINARY = 316,               /* IMAGINARY  */
+    STRUCT = 317,                  /* STRUCT  */
+    UNION = 318,                   /* UNION  */
+    ENUM = 319,                    /* ENUM  */
+    ELLIPSIS = 320,                /* ELLIPSIS  */
+    CASE = 321,                    /* CASE  */
+    DEFAULT = 322,                 /* DEFAULT  */
+    IF = 323,                      /* IF  */
+    ELSE = 324,                    /* ELSE  */
+    SWITCH = 325,                  /* SWITCH  */
+    WHILE = 326,                   /* WHILE  */
+    DO = 327,                      /* DO  */
+    FOR = 328,                     /* FOR  */
+    GOTO = 329,                    /* GOTO  */
+    CONTINUE = 330,                /* CONTINUE  */
+    BREAK = 331,                   /* BREAK  */
+    RETURN = 332,                  /* RETURN  */
+    ALIGNAS = 333,                 /* ALIGNAS  */
+    ALIGNOF = 334,                 /* ALIGNOF  */
+    ATOMIC = 335,                  /* ATOMIC  */
+    GENERIC = 336,                 /* GENERIC  */
+    NORETURN = 337,                /* NORETURN  */
+    STATIC_ASSERT = 338,           /* STATIC_ASSERT  */
+    THREAD_LOCAL = 339,            /* THREAD_LOCAL  */
+    LOWER_THAN_ELSE = 340          /* LOWER_THAN_ELSE  */
+  };
+  typedef enum yytokentype yytoken_kind_t;
+#endif
+/* Token kinds.  */
+#define YYEMPTY -2
+#define YYEOF 0
+#define YYerror 256
+#define YYUNDEF 257
+#define ELIF 258
+#define PASS 259
+#define TRY 260
+#define EXCEPT 261
+#define PRINT 262
+#define RANGE 263
+#define IN 264
+#define FOREACH 265
+#define IDENTIFIER 266
+#define I_CONSTANT 267
+#define F_CONSTANT 268
+#define STRING_LITERAL 269
+#define FUNC_NAME 270
+#define SIZEOF 271
+#define PTR_OP 272
+#define INC_OP 273
+#define DEC_OP 274
+#define LEFT_OP 275
+#define RIGHT_OP 276
+#define LE_OP 277
+#define GE_OP 278
+#define EQ_OP 279
+#define NE_OP 280
+#define TH_OP 281
+#define AND_OP 282
+#define OR_OP 283
+#define MUL_ASSIGN 284
+#define DIV_ASSIGN 285
+#define MOD_ASSIGN 286
+#define ADD_ASSIGN 287
+#define SUB_ASSIGN 288
+#define LEFT_ASSIGN 289
+#define RIGHT_ASSIGN 290
+#define AND_ASSIGN 291
+#define XOR_ASSIGN 292
+#define OR_ASSIGN 293
+#define TYPEDEF_NAME 294
+#define ENUMERATION_CONSTANT 295
+#define TYPEDEF 296
+#define EXTERN 297
+#define STATIC 298
+#define AUTO 299
+#define REGISTER 300
+#define INLINE 301
+#define CONST 302
+#define RESTRICT 303
+#define VOLATILE 304
+#define BOOL 305
+#define CHAR 306
+#define SHORT 307
+#define INT 308
+#define LONG 309
+#define SIGNED 310
+#define UNSIGNED 311
+#define FLOAT 312
+#define DOUBLE 313
+#define VOID 314
+#define COMPLEX 315
+#define IMAGINARY 316
+#define STRUCT 317
+#define UNION 318
+#define ENUM 319
+#define ELLIPSIS 320
+#define CASE 321
+#define DEFAULT 322
+#define IF 323
+#define ELSE 324
+#define SWITCH 325
+#define WHILE 326
+#define DO 327
+#define FOR 328
+#define GOTO 329
+#define CONTINUE 330
+#define BREAK 331
+#define RETURN 332
+#define ALIGNAS 333
+#define ALIGNOF 334
+#define ATOMIC 335
+#define GENERIC 336
+#define NORETURN 337
+#define STATIC_ASSERT 338
+#define THREAD_LOCAL 339
+#define LOWER_THAN_ELSE 340
+
+/* Value type.  */
+#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+union YYSTYPE
+{
+#line 48 "yapl.y"
+
+	int val;
+	struct symtab *symp;
+
+#line 313 "y.tab.c"
+
+};
+typedef union YYSTYPE YYSTYPE;
+# define YYSTYPE_IS_TRIVIAL 1
+# define YYSTYPE_IS_DECLARED 1
+#endif
+
+
+extern YYSTYPE yylval;
+
+
+int yyparse (void);
+
+
+#endif /* !YY_YY_Y_TAB_H_INCLUDED  */
 /* Symbol kind.  */
 enum yysymbol_kind_t
 {
@@ -2098,19 +2318,31 @@ yyreduce:
   case 7: /* constant: I_CONSTANT  */
 #line 64 "yapl.y"
                      {int_consts++;}
-#line 2102 "yapl.tab.c"
+#line 2322 "y.tab.c"
     break;
 
   case 167: /* declarator: pointer direct_declarator  */
 #line 361 "yapl.y"
                                     {pointer_decls++;}
-#line 2108 "yapl.tab.c"
+#line 2328 "y.tab.c"
+    break;
+
+  case 257: /* elif_list: ELIF '(' expression ')' statement  */
+#line 524 "yapl.y"
+                                            { ladder_len++; }
+#line 2334 "y.tab.c"
+    break;
+
+  case 258: /* elif_list: elif_list ELIF '(' expression ')' statement  */
+#line 525 "yapl.y"
+                                                      { ladder_len++; }
+#line 2340 "y.tab.c"
     break;
 
   case 259: /* $@1: %empty  */
 #line 529 "yapl.y"
                                            { ladder_len++; (yyvsp[0].val) = (ladder_len-1); }
-#line 2114 "yapl.tab.c"
+#line 2346 "y.tab.c"
     break;
 
   case 260: /* selection_statement: IF '(' expression ')' statement ELSE $@1 statement  */
@@ -2119,19 +2351,19 @@ yyreduce:
             if(ladder_len >= max) { max = ladder_len; } 
             ladder_len = (yyvsp[-2].val); 
         }
-#line 2123 "yapl.tab.c"
+#line 2355 "y.tab.c"
     break;
 
   case 261: /* selection_statement: IF '(' expression ')' statement  */
 #line 535 "yapl.y"
         { ifs_wo_else++; }
-#line 2129 "yapl.tab.c"
+#line 2361 "y.tab.c"
     break;
 
   case 262: /* $@2: %empty  */
 #line 537 "yapl.y"
         { ladder_len++; (yyvsp[0].val) = (ladder_len-1); }
-#line 2135 "yapl.tab.c"
+#line 2367 "y.tab.c"
     break;
 
   case 263: /* selection_statement: IF '(' expression ')' statement elif_list ELSE $@2 statement  */
@@ -2140,35 +2372,35 @@ yyreduce:
             if(ladder_len >= max) { max = ladder_len; } 
             ladder_len = (yyvsp[-2].val); 
         }
-#line 2144 "yapl.tab.c"
+#line 2376 "y.tab.c"
     break;
 
   case 264: /* selection_statement: IF '(' expression ')' statement elif_list  */
 #line 544 "yapl.y"
         { /* Logic for if-elif without final else */ }
-#line 2150 "yapl.tab.c"
+#line 2382 "y.tab.c"
     break;
 
   case 279: /* translation_unit: external_declaration  */
 #line 569 "yapl.y"
                                {global_declarations++;}
-#line 2156 "yapl.tab.c"
+#line 2388 "y.tab.c"
     break;
 
   case 280: /* translation_unit: translation_unit external_declaration  */
 #line 570 "yapl.y"
                                                 {global_declarations++;}
-#line 2162 "yapl.tab.c"
+#line 2394 "y.tab.c"
     break;
 
   case 281: /* external_declaration: function_definition  */
 #line 574 "yapl.y"
                               {func_definitions++;}
-#line 2168 "yapl.tab.c"
+#line 2400 "y.tab.c"
     break;
 
 
-#line 2172 "yapl.tab.c"
+#line 2404 "y.tab.c"
 
       default: break;
     }

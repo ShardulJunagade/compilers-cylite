@@ -93,7 +93,7 @@ postfix_expression
 	: primary_expression
 	| postfix_expression '[' expression ']'
 	| postfix_expression '(' ')'
-	| postfix_expression '(' argument_expression_list ')'
+	| postfix_expression '(' expression ')'  /* Use expression here */
 	| postfix_expression '.' IDENTIFIER
 	| postfix_expression PTR_OP IDENTIFIER
 	| postfix_expression INC_OP
@@ -101,13 +101,9 @@ postfix_expression
 	| '(' type_name ')' '{' initializer_list '}'
 	| '(' type_name ')' '{' initializer_list ',' '}'
 	| PRINT '(' ')'
-	| PRINT '(' argument_expression_list ')'
+	| PRINT '(' expression ')'               /* Use expression here */
 	;
 
-argument_expression_list
-	: assignment_expression
-	| argument_expression_list ',' assignment_expression
-	;
 
 unary_expression
 	: postfix_expression
@@ -362,9 +358,9 @@ alignment_specifier
 	;
 
 declarator
-    : pointer direct_declarator { pointer_decls++; }
-    | direct_declarator
-    ;
+	: pointer direct_declarator {pointer_decls++;}
+	| direct_declarator
+	;
 
 direct_declarator
 	: IDENTIFIER
@@ -525,8 +521,8 @@ expression_statement
 	;
 
 elif_list
-	: ELIF '(' expression ')' statement
-	| elif_list ELIF '(' expression ')' statement
+	: ELIF '(' expression ')' statement { ladder_len++; }
+	| elif_list ELIF '(' expression ')' statement { ladder_len++; }
 	;
 
 selection_statement
@@ -557,7 +553,7 @@ iteration_statement
 	| FOR '(' expression_statement expression_statement expression ')' statement
 	| FOR '(' declaration expression_statement ')' statement
 	| FOR '(' declaration expression_statement expression ')' statement
-	| FOR '(' IDENTIFIER IN RANGE '(' expression ',' expression ')' ')' statement
+	| FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' statement
 	| FOREACH '(' IDENTIFIER IN expression ')' compound_statement
 	;
 
