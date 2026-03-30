@@ -214,6 +214,7 @@ assignment_operator
 	| OR_ASSIGN
 	;
 
+
 expression
 	: assignment_expression
 	| expression ',' assignment_expression
@@ -343,11 +344,11 @@ atomic_type_specifier
 	;
 
 type_qualifier
-	: CONST
-	| RESTRICT
-	| VOLATILE
-	| ATOMIC
-	;
+    : CONST
+    | RESTRICT
+    | VOLATILE
+    | ATOMIC %prec LOWER_THAN_ELSE 
+    ;
 
 function_specifier
 	: INLINE
@@ -360,9 +361,9 @@ alignment_specifier
 	;
 
 declarator
-	: pointer {pointer_decls++;} direct_declarator
-	| direct_declarator
-	;
+    : pointer direct_declarator { pointer_decls++; }
+    | direct_declarator
+    ;
 
 direct_declarator
 	: IDENTIFIER
