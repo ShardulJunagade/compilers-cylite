@@ -719,8 +719,8 @@ static const yytype_int16 yyrline[] =
      478,   482,   483,   484,   485,   486,   487,   488,   489,   493,
      494,   495,   499,   500,   504,   505,   509,   510,   514,   515,
      519,   520,   524,   524,   525,   526,   527,   528,   532,   533,
-     534,   535,   536,   537,   538,   539,   544,   545,   546,   547,
-     548,   552,   553,   557,   558,   562,   563,   567,   568
+     534,   535,   536,   537,   538,   539,   543,   544,   545,   546,
+     547,   551,   552,   556,   557,   561,   562,   566,   567
 };
 #endif
 
@@ -2126,19 +2126,19 @@ yyreduce:
     break;
 
   case 281: /* translation_unit: external_declaration  */
-#line 552 "yapl.y"
+#line 551 "yapl.y"
                                {global_declarations++;}
 #line 2132 "yapl.tab.c"
     break;
 
   case 282: /* translation_unit: translation_unit external_declaration  */
-#line 553 "yapl.y"
+#line 552 "yapl.y"
                                                 {global_declarations++;}
 #line 2138 "yapl.tab.c"
     break;
 
   case 283: /* external_declaration: function_definition  */
-#line 557 "yapl.y"
+#line 556 "yapl.y"
                               {func_definitions++;}
 #line 2144 "yapl.tab.c"
     break;
@@ -2337,7 +2337,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 571 "yapl.y"
+#line 570 "yapl.y"
 
 #include <stdio.h>
 #include <stdlib.h>

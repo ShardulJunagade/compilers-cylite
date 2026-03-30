@@ -538,7 +538,6 @@ iteration_statement
 	| FOR '(' IDENTIFIER IN RANGE '(' expression ',' expression ')' ')' statement
 	| FOREACH '(' IDENTIFIER IN expression ')' compound_statement
 	;
-	;
 
 jump_statement
 	: GOTO IDENTIFIER ';'
