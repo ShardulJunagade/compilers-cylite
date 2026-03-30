@@ -2,6 +2,8 @@
 %{
 #include<stdio.h>
 extern char *yytext;
+int yylex(void);
+void yyerror(const char *s);
 int global_declarations=0;
 int func_definitions=0;
 int int_consts=0;
@@ -9,10 +11,6 @@ int pointer_decls=0;
 int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
-
-/* Prototypes for lexer and error handler so generated parser sees them */
-int yylex(void);
-void yyerror(const char *s);
 %}
 
 %token 	ELIF PASS TRY EXCEPT PRINT RANGE IN FOREACH
@@ -35,7 +33,8 @@ void yyerror(const char *s);
 
 %start translation_unit
 
-
+%type <val> IF
+%type <val> ELSE
 
 %union
 {
@@ -93,6 +92,8 @@ postfix_expression
 	| postfix_expression DEC_OP
 	| '(' type_name ')' '{' initializer_list '}'
 	| '(' type_name ')' '{' initializer_list ',' '}'
+	| PRINT '(' ')'
+	| PRINT '(' argument_expression_list ')'
 	;
 
 argument_expression_list
@@ -338,6 +339,7 @@ type_qualifier
 	: CONST
 	| RESTRICT
 	| VOLATILE
+	| ATOMIC
 	;
 
 function_specifier
@@ -351,7 +353,7 @@ alignment_specifier
 	;
 
 declarator
-	: pointer direct_declarator {pointer_decls++;}
+	: pointer {pointer_decls++;} direct_declarator
 	| direct_declarator
 	;
 
@@ -472,10 +474,19 @@ static_assert_declaration
 	: STATIC_ASSERT '(' constant_expression ',' STRING_LITERAL ')' ';'
 	;
 
+try_except_statement
+	: TRY compound_statement EXCEPT compound_statement
+	;
 
 statement
-	: unmatched_statement
-	| matched_statement
+	: labeled_statement
+	| compound_statement
+	| expression_statement
+	| selection_statement
+	| iteration_statement
+	| jump_statement
+	| try_except_statement
+	| PASS ';'
 	;
 
 labeled_statement
@@ -504,21 +515,17 @@ expression_statement
 	| expression ';'
 	;
 
-/* Matched / Unmatched statements to resolve dangling-else */
-matched_statement
-	: labeled_statement
-	| compound_statement
-	| expression_statement
-	| iteration_statement
-	| jump_statement
-	| SWITCH '(' expression ')' matched_statement
-	| IF '(' expression ')' matched_statement ELSE matched_statement
-		{ ladder_len++; if(ladder_len>max) max=ladder_len; ladder_len--; }
+elif_list
+	: ELIF '(' expression ')' statement
+	| elif_list ELIF '(' expression ')' statement
 	;
 
-unmatched_statement
-	: IF '(' expression ')' statement { ifs_wo_else++; }
-	| IF '(' expression ')' matched_statement ELSE unmatched_statement
+selection_statement
+	: IF '(' expression ')' statement ELSE {ladder_len++;$6=(ladder_len-1);} statement {if(ladder_len>=max){max=ladder_len;} /*printf("ladder_len=%d\n",ladder_len);*/ladder_len=$6;} 
+	| IF '(' expression ')' statement {ifs_wo_else++;}
+	| IF '(' expression ')' statement elif_list ELSE statement
+	| IF '(' expression ')' statement elif_list
+	| SWITCH '(' expression ')' statement
 	;
 
 iteration_statement
@@ -528,6 +535,9 @@ iteration_statement
 	| FOR '(' expression_statement expression_statement expression ')' statement
 	| FOR '(' declaration expression_statement ')' statement
 	| FOR '(' declaration expression_statement expression ')' statement
+	| FOR '(' IDENTIFIER IN RANGE '(' expression ',' expression ')' ')' statement
+	| FOREACH '(' IDENTIFIER IN expression ')' compound_statement
+	;
 	;
 
 jump_statement
