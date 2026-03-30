@@ -41,6 +41,7 @@ int max=-1;
 
 %start translation_unit
 
+%right '('
 
 
 %union
@@ -344,11 +345,11 @@ atomic_type_specifier
 	;
 
 type_qualifier
-    : CONST
-    | RESTRICT
-    | VOLATILE
-    | ATOMIC %prec LOWER_THAN_ELSE 
-    ;
+	: CONST
+	| RESTRICT
+	| VOLATILE
+	| ATOMIC %prec LOWER_THAN_ELSE  /* Forces 'ATOMIC' as a qualifier to have lower priority than '(' */
+	;
 
 function_specifier
 	: INLINE
