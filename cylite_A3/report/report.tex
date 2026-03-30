@@ -179,14 +179,140 @@ While the item sets and state machine were successfully compiled, the integratio
 
 As noted in the initial automaton analysis, the introduction of CYLite's advanced control structures—specifically the \texttt{elif} ladders and optional \texttt{else} blocks—introduced non-determinism into the LALR(1) parsing table. When processed by GNU Bison, the grammar generated exactly 6 shift/reduce conflicts and 1 reduce/reduce conflict. 
 
+
+\begin{figure}[h!]
+    \centering
+    % Replace the placeholder below with your actual image filename
+    \includegraphics[width=0.8\textwidth]{Images/image2.jpeg}
+    \caption{Identification of the conflicting states in the LALR(1) automaton.}
+    \label{fig:conflicting_states}
+\end{figure}
+
+
 To satisfy the structural rigor required by the compiler front-end, we must isolate the specific item sets where the automaton encounters multiple valid transition paths, identify the conflicting productions, and apply deterministic precedence rules to resolve them.
 
+\subsection{Shift/Reduce Conflict: The \texttt{ATOMIC} Keyword Ambiguity}
+
+One of the identified conflicts occurs in \textbf{State 27} and involves the \texttt{ATOMIC} keyword. This is a \textbf{Shift/Reduce conflict}.
+
+\vspace{0.7cm}
+
+\textbf{Exact Productions Involved:}
+
+\begin{figure}[h!]
+    \centering
+    % Replace the placeholder below with your actual image filename
+    \includegraphics[width=0.8\textwidth]{Images/image3.jpeg}
+    \caption{Example of a shift/reduce conflict involving the \texttt{ATOMIC} keyword.}
+    \label{fig:ifelse_dangling}
+\end{figure}
+
+\textbf{Conflict Analysis:}
+In this state, the parser has just consumed the \texttt{ATOMIC} token and is looking ahead at the next token, which is an opening parenthesis \texttt{`('}. The automaton faces a structural ambiguity:
+\begin{itemize}
+    \item \textbf{Shift Action:} It can shift the \texttt{`('} token onto the stack, anticipating an \texttt{atomic\_type\_specifier} construct (e.g., \texttt{\textunderscore Atomic(int)}).
+    \item \textbf{Reduce Action:} It can immediately reduce the \texttt{ATOMIC} token into a \texttt{type\_qualifier} (acting similarly to \texttt{const} or \texttt{volatile}), assuming the parenthesis belongs to a subsequent cast or expression.
+\end{itemize}
+Bison's default behavior resolves this by favoring the shift operation, but the conflict indicates a deeper grammatical overlap between qualifiers and type specifiers.
+
+\subsection{Shift/Reduce Conflict: Abstract vs. Concrete Pointer Declarators}
+
+Another significant conflict surfaces in \textbf{State 345}, representing a \textbf{Shift/Reduce conflict} driven by the overlap between named declarators and abstract type definitions, complicated by embedded semantic actions.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/image4.jpeg}
+    \caption{Shift/Reduce conflict involving abstract and concrete pointer declarators in State 345.}
+    \label{fig:pointer_conflict}
+\end{figure}
+
+\textbf{Conflict Analysis:}
+In this state, the parser has processed a pointer token (e.g., \texttt{*}) and is looking ahead at an opening parenthesis \texttt{`('}. The ambiguity arises because the parser cannot immediately determine if it is parsing an \texttt{abstract\_declarator} (such as a typecast \texttt{(int *())}) or a concrete \texttt{declarator} (such as a variable declaration \texttt{int *(p)}). 
+
+Crucially, the concrete \texttt{declarator} rule contains an embedded mid-rule semantic action (Rule 168 / \texttt{\$@1}), which increments the \texttt{pointer\_decls} counter. The automaton faces two conflicting choices:
+\begin{itemize}
+    \item \textbf{Shift Action:} Directly shift the \texttt{`('} onto the stack to begin constructing a \texttt{direct\_abstract\_declarator} (which lacks the mid-rule action).
+    \item \textbf{Reduce Action:} Immediately reduce the empty mid-rule action \texttt{\$@1} (executing the counter increment) before shifting the \texttt{`('} to build a standard \texttt{direct\_declarator}.
+\end{itemize}
+Bison defaults to shifting, which means pointer declarations wrapped in parentheses might temporarily bypass the embedded semantic counter until the conflict is explicitly resolved.
+
+\newpage
+
+
+
+
 \subsection{Shift/Reduce Conflicts: The Dangling-Else and \texttt{elif} Ambiguity}
-% [We will insert the specific State from yapl.output and our explanation here]
 
-\subsection{Reduce/Reduce Conflict Analysis}
-% [We will insert the specific State from yapl.output and our explanation here]
+The most prominent structural ambiguities introduced by the CYLite extensions occur within the conditional branching logic, explicitly captured in \textbf{State 473}. This represents a classic \textbf{Shift/Reduce conflict} compounded by the new \texttt{elif} construct.
 
-\subsection{Conflict Resolution and Grammar Modifications}
-% [We will document the %nonassoc fixes and show the before/after parsing examples here]
+\textbf{Exact Productions Involved:}
+\begin{figure}[h!]
+    \centering
+    % Replace the placeholder below with your actual image filename
+    \includegraphics[width=0.8\textwidth]{Images/image5.jpeg}
+    \caption{Shift/Reduce conflict involving the Dangling-Else and \texttt{elif} ambiguity in State 473.}
+    \label{fig:dangling_else_conflict}
+\end{figure}
+
+
+\textbf{Conflict Analysis:}
+In State 473, the parser has successfully matched an entire \texttt{IF} statement up to its closing block (indicated by the dot \texttt{.} after \texttt{statement}). It is now looking ahead at the next token, which is either an \texttt{ELIF} or an \texttt{ELSE}. The automaton is trapped in a non-deterministic state due to the possibility of nested conditionals (e.g., \texttt{if (A) if (B) pass; else pass;}):
+\begin{itemize}
+    \item \textbf{Shift Action:} The parser can shift the \texttt{ELIF} or \texttt{ELSE} token onto the stack, aggressively binding it to the most recently opened (innermost) \texttt{IF} statement.
+    \item \textbf{Reduce Action:} The parser can immediately reduce the consumed tokens into a completed \texttt{selection\_statement} (Rule 263). This action assumes the \texttt{ELIF} or \texttt{ELSE} token belongs to a parent (outer) \texttt{IF} block higher up in the syntax tree.
+\end{itemize}
+Because Bison resolves shift/reduce conflicts by favoring the shift action by default, it naturally binds \texttt{else} and \texttt{elif} clauses to the closest preceding \texttt{if}. However, explicit precedence directives are required to suppress the generator warnings and formalize this behavior.
+
+
+
+
+
+
+\subsection{Shift/Reduce Conflicts: Propagation in \texttt{elif} Chains}
+
+The dangling-else ambiguity documented in State 473 propagates directly into the evaluation of the recursive \texttt{elif\_list} itself, as prominently visible in \textbf{State 492}. This is another \textbf{Shift/Reduce conflict}.
+
+\textbf{Exact Productions Involved:}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/image6.jpeg}
+    \caption{Shift/Reduce conflict in State 492 demonstrating propagation within \texttt{elif} chains.}
+    \label{fig:elif_chain_conflict}
+\end{figure}
+
+\textbf{Conflict Analysis:}
+In State 492, the parser has successfully aggregated one or more \texttt{elif} branches into an \texttt{elif\_list}. Upon encountering another \texttt{ELIF} or an \texttt{ELSE} token, it faces the same structural indecision as before:
+\begin{itemize}
+    \item \textbf{Shift Action:} Shift the token to continue building the current \texttt{elif\_list} (Rule 260) or to cap it off with an \texttt{ELSE} block (Rule 264).
+    \item \textbf{Reduce Action:} Immediately reduce the entire \texttt{IF}-\texttt{ELIF} chain into a completed \texttt{selection\_statement} (Rule 265), assuming the upcoming tokens belong to a parent \texttt{IF} construct higher in the hierarchy.
+\end{itemize}
+Just like State 473, this is resolved by enforcing precedence rules that explicitly instruct the parser to shift trailing conditionals rather than prematurely reducing the block.
+
+
+
+\subsection{Reduce/Reduce Conflict: The Comma Operator Ambiguity}
+
+The sole \textbf{Reduce/Reduce conflict} in the LALR(1) automaton surfaces in \textbf{State 515}, highlighting a structural overlap involving the comma \texttt{`,`} token.
+
+\textbf{Exact Productions Involved:}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{/Users/tejasmacipad/Downloads/A3/compilers-cylite/cylite_A3/report/Images/image7.jpeg}
+    \caption{Reduce/Reduce conflict in State 515 illustrating the comma operator ambiguity.}
+    \label{fig:comma_conflict}
+\end{figure}
+
+\textbf{Conflict Analysis:}
+This conflict arises from the dual syntactic role of the comma in CYLite. The comma can act as a sequence operator chaining multiple assignments together into a single unified expression (Rule 90), or it can act as a simple delimiter separating distinct elements in a list (such as function parameters or arguments for the newly added \texttt{print} built-in). 
+
+When the parser successfully reads an \texttt{assignment\_expression} and encounters a lookahead comma \texttt{`,`}, it faces two equally valid reduction paths for the exact same sequence of tokens:
+\begin{itemize}
+    \item \textbf{Reduce Action 1 (Rule 89):} Reduce the isolated \texttt{assignment\_expression} into a base \texttt{expression}. The parser assumes the upcoming comma is a list separator (e.g., moving to the next argument in a function call).
+    \item \textbf{Reduce Action 2 (Rule 90):} Reduce the entire parsed sequence (\texttt{expression ',' assignment\_expression}) into a single chained \texttt{expression}. The parser assumes the comma is a mathematical sequence operator.
+\end{itemize}
+By default, Bison resolves Reduce/Reduce conflicts by blindly choosing the rule that appears first in the grammar file (Rule 89). However, relying on implicit file ordering is dangerous for compiler stability. To fix this, explicit left-associativity (\texttt{\%left ','}) must be declared to instruct the parser on how to definitively group trailing commas.
+
+
+
+
 \end{document}
