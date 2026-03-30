@@ -528,12 +528,25 @@ elif_list
 	;
 
 selection_statement
-	: IF '(' expression ')' statement ELSE {ladder_len++;$6=(ladder_len-1);} statement {if(ladder_len>=max){max=ladder_len;} /*printf("ladder_len=%d\n",ladder_len);*/ladder_len=$6;} 
-	| IF '(' expression ')' statement {ifs_wo_else++;}
-	| IF '(' expression ')' statement elif_list ELSE statement
-	| IF '(' expression ')' statement elif_list
-	| SWITCH '(' expression ')' statement
-	;
+    : IF '(' expression ')' statement ELSE { ladder_len++; $6 = (ladder_len-1); } statement 
+        { 
+            if(ladder_len >= max) { max = ladder_len; } 
+            ladder_len = $6; 
+        }
+    | IF '(' expression ')' statement %prec LOWER_THAN_ELSE 
+        { ifs_wo_else++; }
+    | IF '(' expression ')' statement elif_list ELSE 
+        { ladder_len++; $7 = (ladder_len-1); } 
+      statement 
+        { 
+            if(ladder_len >= max) { max = ladder_len; } 
+            ladder_len = $7; 
+        }
+    | IF '(' expression ')' statement elif_list %prec LOWER_THAN_ELSE
+        { /* Logic for if-elif without final else */ }
+    | SWITCH '(' expression ')' statement
+    ;
+
 
 iteration_statement
 	: WHILE '(' expression ')' statement
