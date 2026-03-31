@@ -312,7 +312,241 @@ When the parser successfully reads an \texttt{assignment\_expression} and encoun
 \end{itemize}
 By default, Bison resolves Reduce/Reduce conflicts by blindly choosing the rule that appears first in the grammar file (Rule 89). However, relying on implicit file ordering is dangerous for compiler stability. To fix this, explicit left-associativity (\texttt{\%left ','}) must be declared to instruct the parser on how to definitively group trailing commas.
 
+\section{Part - 2: Conflict Resolution in Selection Statements}
+
+The implementation of selection statements (\texttt{IF-ELIF-ELSE}) initially introduced several Shift/Reduce conflicts. This section documents the systematic approach taken to achieve a zero-conflict grammar while maintaining complex semantic tracking.
+
+\subsubsection*{1. Conflicts Present in the Original Grammar}
+In the initial version of the CYLite grammar, the LALR(1) automaton reported six Shift/Reduce conflicts specifically within the \texttt{selection\_statement} production. These conflicts were caused by the classic \textbf{``Dangling Else''} ambiguity.
+
+When the parser encountered nested structures, such as:
+\begin{center}
+\texttt{if (cond1) if (cond2) statement1; else statement2;}
+\end{center}
+
+The automaton faced two mathematically valid but competing actions upon reaching the \texttt{ELSE} token:
+\begin{itemize}
+    \item \textbf{Shift:} Bind the \texttt{ELSE} to the most recent (innermost) \texttt{IF}. This is the standard behavior in C-style languages.
+    \item \textbf{Reduce:} Complete the innermost \texttt{IF} statement (\texttt{if (cond2) statement1;}) and bind the \texttt{ELSE} to the outermost \texttt{IF}.
+\end{itemize}
+
+Since both paths were syntactically reachable, the grammar was considered ambiguous. While Bison defaults to a ``Shift'' action, the presence of these conflicts indicates an unstable grammar that relies on tool defaults rather than explicit logic.
+
+\subsubsection*{2. Modification of the Grammar to Remove Conflicts}
+To eliminate these conflicts, the grammar was restructured using \textbf{Precedence Overriding}. By defining a hierarchy of precedence for the tokens involved, we provide the parser with an explicit tie-breaking mechanism.
+
+\textbf{Preamble Modifications:}
+First, a dummy terminal \texttt{LOWER\_THAN\_ELSE} was defined with the lowest precedence, followed by the actual \texttt{ELSE} and \texttt{ELIF} tokens.
+
+\begin{lstlisting}[language=C, caption={Precedence definitions in the Preamble}]
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELIF
+%nonassoc ELSE
+\end{lstlisting}
+
+\textbf{Production Rule Refinement and Logic Breakdown:}
+
+The \texttt{selection\_statement} was restructured to perform three concurrent tasks: resolving the shift/reduce conflict, tracking nested ladder depths, and maintaining a count of incomplete \texttt{if} blocks. 
 
 
+\textbf{Changes made in the grammar:}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/image8.jpeg}
+    \caption{changes made in the grammar}
+    \label{fig:conflict_removal}
+\end{figure}
+
+
+\subsubsection*{Technical Explanation of Rule Components}
+
+\begin{itemize}
+    \item \textbf{Precedence Override (\texttt{\%prec LOWER\_THAN\_ELSE})}: This is the syntactic fix for the ``Dangling Else'' problem. By attaching this directive to the productions lacking an \texttt{ELSE} clause, we manually lower the precedence of the reduction. This forces the parser to wait (shift) if it sees an \texttt{ELSE} token, ensuring the \texttt{else} always binds to the innermost \texttt{if}.
+    
+    \item The Mid-Rule Action (\texttt{\{ ladder\_len++; ... \}}): Unlike standard actions that run after a rule is complete, this runs immediately after the \texttt{ELSE} is encountered. This is necessary to increment the ``ladder'' count precisely as the parser enters the alternative branch of a selection.
+    
+    \item \textbf{Semantic Stack Storage (\texttt{\$6} and \texttt{\$7})}: Because Bison rules are recursive, a global counter like \texttt{ladder\_len} can be corrupted by nested \texttt{if} statements. To prevent this, the current state of the counter (minus the new increment) is saved directly onto Bison's semantic stack at a specific index (\texttt{\$6} or \texttt{\$7}). This effectively creates a localized, rule-specific backup of the parent's state.
+    
+    \item \textbf{Global Maxima Comparison}: Inside the final action block, the code compares the recently incremented \texttt{ladder\_len} against a global \texttt{max} variable. This ensures that even if the parser is currently 10 levels deep in nested logic, the longest contiguous chain found anywhere in the program is recorded.
+    
+    \item \textbf{Counter Restoration (\texttt{ladder\_len = \$6})}: This is the ``pop'' operation. Once the current selection statement is fully parsed and reduced, the counter is restored to its saved value from the semantic stack. This ensures that when the parser returns to the parent scope, the \texttt{ladder\_len} is exactly what it was before the nested statement began.
+    
+    \item \textbf{Incomplete Chain Tracking (\texttt{ifs\_wo\_else++})}: This counter is placed specifically within the \texttt{\%prec} filtered rules. It increments only when the parser definitively concludes that an \texttt{IF} block has no corresponding \texttt{ELSE}, satisfying the requirement for counting incomplete selection structures.
+\end{itemize}
+
+\subsubsection*{3. Resolution Logic: How the Change Resolves the Conflicts}
+The modification resolves the Shift/Reduce conflicts by transforming the ambiguity into a deterministic priority check:
+
+\begin{enumerate}
+    \item \textbf{Precedence Arbitration:} When the parser sees an \texttt{ELSE} token in the lookahead buffer, it compares the precedence of that token (\texttt{ELSE}) against the precedence of the rule it could potentially reduce (\texttt{IF...statement}).
+    \item \textbf{Deterministic Shifting:} Because \texttt{ELSE} is defined later in the preamble than \texttt{LOWER\_THAN\_ELSE}, it carries a higher precedence. The parser is thus explicitly instructed to \textbf{Shift} (bind the \texttt{ELSE} to the inner \texttt{IF}) rather than \textbf{Reduce}.
+    \item \textbf{Elimination of Ambiguity:} By providing a clear hierarchy, the ``choice'' between shifting and reducing is removed. The LALR(1) state machine now has exactly one valid path for every possible input sequence, resulting in the elimination of the six Shift/Reduce warnings.
+\end{enumerate}
+
+Furthermore, the use of mid-rule actions (storing values at \texttt{\$6} and \texttt{\$7}) ensures that the semantic tracking of the if-else ladder depth remains accurate. These values act as a manual stack, preserving the counter state during recursion and allowing the grammar to calculate the global \texttt{max} depth correctly without interfering with the syntactic resolution.
+
+
+
+
+
+
+\subsection{Conflict Resolution: Atomic and Pointer Declarator Logic}
+
+The transition in the grammar addressed structural ambiguities involving type qualifiers and declarators. This was essential to reduce the conflict count from four down to two.
+
+\subsection{1. Conflicts Present in the Original Grammar}
+Two distinct Shift/Reduce conflicts were identified in this phase:
+\begin{enumerate}
+    \item \textbf{The Atomic Ambiguity (State 27):} In the original grammar, the \texttt{ATOMIC} keyword served a dual role as both a \texttt{type\_specifier} (e.g., \texttt{\_Atomic(int)}) and a \texttt{type\_qualifier} (e.g., \texttt{\_Atomic int}). When the parser encountered the \texttt{ATOMIC} token, it could not determine whether to \textbf{shift} (treating it as the start of a specifier) or \textbf{reduce} (treating it as a standalone qualifier).
+    
+    \item \textbf{The Declarator Mid-Rule Conflict (State 345):} The original \texttt{declarator} rule contained a mid-rule action to increment the pointer counter. In Yacc, mid-rule actions are implemented as dummy non-terminals that force a reduction at a specific point in the rule. This forced reduction prevented the parser from looking ahead to distinguish between concrete declarators and abstract declarators, resulting in a Shift/Reduce conflict.
+\end{enumerate}
+
+\subsection{2. Modification of the Grammar to Remove Conflicts}
+The following modifications were implemented to resolve these ambiguities, as visualized in the code diff in Figure \ref{fig:atomic_pointer_diff}.
+
+\textbf{Type Qualifier Refinement:}
+The \texttt{ATOMIC} production within \texttt{type\_qualifier} was tagged with a low precedence marker.
+\begin{lstlisting}[language=C]
+type_qualifier
+    : CONST | RESTRICT | VOLATILE
+    | ATOMIC %prec LOWER_THAN_ELSE
+    ;
+\end{lstlisting}
+
+\textbf{Declarator Action Relocation:}
+The semantic action for counting pointers was moved from a mid-rule position to the end of the production rule.
+\begin{lstlisting}[language=C]
+declarator
+    : pointer direct_declarator { pointer_decls++; }
+    | direct_declarator
+    ;
+\end{lstlisting}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{Images/image9.jpeg}
+    \caption{Git Diff showing the relocation of pointer actions and the use of precedence for the ATOMIC keyword.}
+    \label{fig:atomic_pointer_diff}
+\end{figure}
+
+\subsection{3. Resolution Logic: How the Change Resolves the Conflicts}
+The changes resolve the conflicts by allowing the LALR(1) state machine to delay its decisions until more context is available.
+
+\subsubsection*{Technical Breakdown of the Resolution}
+
+\begin{itemize}
+    \item \textbf{Precedence Arbitration for ATOMIC}: By applying \texttt{\%prec LOWER\_THAN\_ELSE} to the \texttt{ATOMIC} qualifier, the parser is instructed that reducing \texttt{ATOMIC} as a qualifier is a low-priority action. If a parenthesis follows (indicating a specifier), the parser will \textbf{Shift} (prioritizing the specifier rule) instead of reducing, thus removing the ambiguity in State 27.
+    
+    \item \textbf{Elimination of Mid-Rule Reduction}: In the original rule, the parser was forced to reduce an empty dummy rule to execute the pointer increment \textit{before} seeing the \texttt{direct\_declarator}. By moving \texttt{\{ pointer\_decls++; \}} to the end of the rule, the parser is no longer forced to make a premature reduction. 
+    
+    \item \textbf{Delayed Decision Making}: Moving the action allows the parser to remain in a state of "ordered uncertainty." It can wait until the entire \texttt{pointer direct\_declarator} sequence is matched before committing to the reduction and the subsequent counter increment. This successfully eliminated the Shift/Reduce conflict in State 345.
+    
+    \item \textbf{Semantic Integrity}: Moving the action to the end of the rule has no impact on the final count of \texttt{pointer\_decls}. The count still accurately reflects the number of pointer declarations in the source code, but the syntactic path to that count is now deterministic and conflict-free.
+\end{itemize}
+
+
+\subsection{Conflict Resolution: Atomic Specifier vs. Qualifier Ambiguity}
+
+A persistent Shift/Reduce conflict occurred in the LALR(1) automaton (State 27) regarding the \texttt{ATOMIC} keyword. This section details the disambiguation strategy used to differentiate between its dual roles.
+
+\subsection*{1. Conflicts Present in the Original Grammar}
+In the CYLite grammar, the \texttt{ATOMIC} token acts as both a \textbf{type specifier} and a \textbf{type qualifier}. This created a conflict when the parser encountered the sequence \texttt{ATOMIC (}.
+
+The automaton reached a state with two competing actions:
+\begin{itemize}
+    \item \textbf{Shift:} Treat \texttt{ATOMIC} as the beginning of an \texttt{atomic\_type\_specifier} (e.g., \texttt{\_Atomic(int)}). This requires shifting the \texttt{'('} token onto the stack.
+    \item \textbf{Reduce:} Treat \texttt{ATOMIC} as a completed \texttt{type\_qualifier} (e.g., \texttt{\_Atomic int x;}). This requires reducing the token before seeing what follows.
+\end{itemize}
+
+Because both interpretations are syntactically valid in the C11 standard, the parser could not determine the correct path without explicit priority rules.
+
+\subsection*{2. Modification of the Grammar to Remove Conflicts}
+To resolve this, the grammar was modified to give the \texttt{atomic\_type\_specifier} (the version with parentheses) higher priority than the standalone qualifier.
+
+\textbf{Preamble Modifications:}
+A right-associativity rule was added for the open parenthesis to give it a measurable precedence level.
+\begin{lstlisting}[language=C]
+%right '('
+\end{lstlisting}
+
+\textbf{Production Rule Refinement:}
+As shown in Figure \ref{fig:atomic_diff}, the \texttt{ATOMIC} production within \texttt{type\_qualifier} was tagged with \texttt{LOWER\_THAN\_ELSE} to ensure it remains the lower-priority option.
+
+\begin{lstlisting}[language=C, caption={Disambiguating ATOMIC via Precedence}]
+type_qualifier
+    : CONST
+    | RESTRICT
+    | VOLATILE
+    | ATOMIC %prec LOWER_THAN_ELSE  /* Assigned lower priority than '(' */
+    ;
+\end{lstlisting}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{Images/image10.jpeg}
+    \caption{Git Diff showing the introduction of parenthesis precedence and the ATOMIC qualifier override.}
+    \label{fig:atomic_diff}
+\end{figure}
+
+\subsection*{3. Resolution Logic: How the Change Resolves the Conflicts}
+The resolution relies on the fundamental LALR(1) behavior of comparing the precedence of a \textit{potential reduction} against an \textit{incoming token}.
+
+\begin{enumerate}
+    \item \textbf{Precedence Comparison:} When the parser is in a state where it has seen \texttt{ATOMIC} and the lookahead token is \texttt{'('}, it compares the precedence of the \texttt{type\_qualifier} rule (now \texttt{LOWER\_THAN\_ELSE}) against the precedence of the \texttt{'('} token.
+    \item \textbf{Shift Priority:} Since \texttt{'('} was defined in the preamble without a low-priority tag, it carries a higher precedence than \texttt{LOWER\_THAN\_ELSE}.
+    \item \textbf{Deterministic Path:} The parser is instructed to \textbf{Shift} the parenthesis. This effectively chooses the \texttt{atomic\_type\_specifier} path and eliminates the possibility of a premature reduction to a \texttt{type\_qualifier}.
+\end{enumerate}
+
+By explicitly defining how the parser should handle the \texttt{'('} following \texttt{ATOMIC}, the Shift/Reduce conflict in State 27 is fully resolved, ensuring the grammar adheres to C11 type-naming conventions.
+
+\section{Conflict Resolution: The Comma Operator and Diamond Ambiguity}
+
+The final stage of grammar optimization involved resolving a Reduce/Reduce conflict (State 512) centered on the dual role of the comma token. This section details the structural changes required to achieve a completely deterministic, conflict-free grammar.
+
+\subsection{1. Conflicts Present in the Original Grammar}
+The primary conflict in the original grammar was a **Reduce/Reduce** ambiguity. This occurred because the comma token served two structurally identical purposes in different contexts:
+\begin{itemize}
+    \item \textbf{As a Sequence Operator:} Chaining multiple assignments into a single \texttt{expression}.
+    \item \textbf{As a List Separator:} Delimiting arguments in function calls, the \texttt{PRINT} built-in, and the \texttt{RANGE} clause of the \texttt{FOR} loop.
+\end{itemize}
+
+Specifically, both \texttt{expression} and a specialized \texttt{argument\_expression\_list} were defined as recursive, comma-separated lists of \texttt{assignment\_expression}. When the parser encountered a comma inside parentheses, it reached a ``Diamond Ambiguity'' where it could not decide which of the two rules to reduce. This forced the parser to rely on default rule ordering, which is considered unstable for production-level compilers.
+
+\subsection{2. Modification of the Grammar to Remove Conflicts}
+To resolve this, a strategy of **Rule Unification** and **Contextual Restriction** was applied, as shown in the Git diff in Figure \ref{fig:comma_diff}.
+
+\textbf{A. Rule Unification (Postfix Expressions):}
+The redundant \texttt{argument\_expression\_list} rule was entirely removed. Function calls and the \texttt{PRINT} statement were updated to use the standard \texttt{expression} rule.
+\begin{lstlisting}[language=C]
+postfix_expression
+    : postfix_expression '(' expression ')' /* Unified Rule */
+    | PRINT '(' expression ')'               /* Unified Rule */
+\end{lstlisting}
+
+\textbf{B. Contextual Restriction (Iteration Statements):}
+The \texttt{FOR} loop's \texttt{RANGE} clause was modified to accept only \texttt{assignment\_expression} for its bounds.
+\begin{lstlisting}[language=C]
+| FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' statement
+\end{lstlisting}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{Images/image11.jpeg} % ERROR: File image_3dc6fe.png is missing from the directory.
+    \caption{Final Git diff showing rule unification for expressions and contextual constraints in the FOR loop.}
+    \label{fig:comma_diff}
+\end{figure}
+
+\subsection{3. Resolution Logic: How the Change Resolves the Conflicts}
+The changes resolve the Reduce/Reduce conflict by eliminating the "multiple choice" scenario for the parser:
+
+\begin{enumerate}
+    \item \textbf{Elimination of the Diamond Path:} By removing \texttt{argument\_expression\_list}, the parser no longer has two competing rules to reduce a comma-separated list. There is now only one valid path: the \texttt{expression} rule.
+    \item \textbf{Contextual Banning of the Comma Operator:} The most critical resolution occurred in the \texttt{RANGE} clause. An \texttt{assignment\_expression} is a subset of an \texttt{expression} that \textit{does not} include the comma operator at the top level. By restricting \texttt{RANGE} to this type, we effectively ``ban'' the comma operator within those parentheses.
+    \item \textbf{Deterministic Separation:} Because a comma operator is now illegal inside the \texttt{assignment\_expression} used for \texttt{RANGE} bounds, the parser knows with 100\% certainty that any comma encountered \textit{must} be the separator between the two range arguments.
+\end{enumerate}
+
+\subsubsection*{Note on Semantic Correctness in Elif Chains}
+As seen in the updated \texttt{elif\_list} production in Figure \ref{fig:comma_diff}, the \texttt{ladder\_len++} action was added to every branch of the \texttt{elif} structure. This ensures that the ``If-Else Ladder'' depth counter accurately reflects long chains of \texttt{if-elif-elif-else}, providing precise data for the final report metrics while maintaining a conflict-free state.
 
 \end{document}
