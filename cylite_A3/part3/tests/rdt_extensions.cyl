@@ -1,0 +1,27 @@
+int main() {
+    int i;
+    int arr[3];
+    arr[0] = 1;
+    arr[1] = 2;
+    arr[2] = 3;
+
+    if (i) pass;
+    elif (arr[0]) pass;
+    else pass;
+
+    for (i in range(0, 3)) {
+        print(i);
+    }
+
+    foreach(i in arr) {
+        print(i);
+    }
+
+    try {
+        pass;
+    } except {
+        pass;
+    }
+
+    return 0;
+}

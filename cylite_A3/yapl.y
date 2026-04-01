@@ -1,6 +1,12 @@
 
 %{
 #include<stdio.h>
+#include<stdarg.h>
+#include<stdlib.h>
+#include<string.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+#include<unistd.h>
 extern char *yytext;
 int yylex(void);
 void yyerror(const char *s);
@@ -11,6 +17,39 @@ int pointer_decls=0;
 int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
+
+#define YYDEBUG 1
+#define YYFPRINTF yytrace_fprintf
+
+typedef struct {
+	char lhs[128];
+	int rhs_count;
+	char rhs[64][128];
+} ReductionStep;
+
+typedef struct {
+	int active;
+	char lhs[128];
+	int rhs_count;
+	char rhs[64][128];
+} PendingReduction;
+
+static ReductionStep *g_steps = NULL;
+static int g_step_count = 0;
+static int g_step_cap = 0;
+static PendingReduction g_pending = {0};
+static char g_trace_line[8192];
+static int g_trace_line_len = 0;
+
+static void reset_pending(void);
+static void parse_debug_line(const char *line);
+static int yytrace_fprintf(FILE *stream, const char *fmt, ...);
+static void append_step(const char *lhs, char rhs[][128], int rhs_count);
+static void print_reverse_derivation(void);
+static int write_reverse_derivation_dot(const char *dot_path);
+static int write_reverse_derivation_png(const char *png_path);
+static int looks_like_nonterminal(const char *sym);
+static void free_derivation_steps(void);
 %}
 
 %token 	ELIF PASS TRY EXCEPT PRINT RANGE IN FOREACH
@@ -586,14 +625,367 @@ declaration_list
 	;
 
 %%
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 char buff[2048];
 
 int yylex(void);
 int mode=-1;
+
+static void reset_pending(void)
+{
+	g_pending.active = 0;
+	g_pending.lhs[0] = '\0';
+	g_pending.rhs_count = 0;
+}
+
+static void append_step(const char *lhs, char rhs[][128], int rhs_count)
+{
+	int i;
+
+	if (g_step_count == g_step_cap)
+	{
+		int new_cap = (g_step_cap == 0) ? 256 : (g_step_cap * 2);
+		ReductionStep *tmp = (ReductionStep *)realloc(g_steps, (size_t)new_cap * sizeof(ReductionStep));
+		if (tmp == NULL)
+		{
+			return;
+		}
+		g_steps = tmp;
+		g_step_cap = new_cap;
+	}
+
+	strncpy(g_steps[g_step_count].lhs, lhs, sizeof(g_steps[g_step_count].lhs) - 1);
+	g_steps[g_step_count].lhs[sizeof(g_steps[g_step_count].lhs) - 1] = '\0';
+	g_steps[g_step_count].rhs_count = rhs_count;
+
+	for (i = 0; i < rhs_count && i < 64; i++)
+	{
+		strncpy(g_steps[g_step_count].rhs[i], rhs[i], sizeof(g_steps[g_step_count].rhs[i]) - 1);
+		g_steps[g_step_count].rhs[i][sizeof(g_steps[g_step_count].rhs[i]) - 1] = '\0';
+	}
+
+	g_step_count++;
+}
+
+static void parse_debug_line(const char *line)
+{
+	const char *p;
+	char symbol[128];
+	int i = 0;
+
+	if (strncmp(line, "Reducing stack by rule ", 23) == 0)
+	{
+		reset_pending();
+		g_pending.active = 1;
+		return;
+	}
+
+	if (!g_pending.active)
+	{
+		return;
+	}
+
+	p = strstr(line, "-> $$ = nterm ");
+	if (p != NULL)
+	{
+		p += 14;
+		while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' && i < 127)
+		{
+			symbol[i++] = *p;
+			p++;
+		}
+		symbol[i] = '\0';
+		if (symbol[0] != '\0')
+		{
+			strncpy(g_pending.lhs, symbol, sizeof(g_pending.lhs) - 1);
+			g_pending.lhs[sizeof(g_pending.lhs) - 1] = '\0';
+			append_step(g_pending.lhs, g_pending.rhs, g_pending.rhs_count);
+		}
+		reset_pending();
+		return;
+	}
+
+	p = strstr(line, " = token ");
+	if (p == NULL)
+	{
+		p = strstr(line, " = nterm ");
+	}
+	if (p == NULL)
+	{
+		return;
+	}
+
+	p += 9;
+	i = 0;
+	while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' && i < 127)
+	{
+		symbol[i++] = *p;
+		p++;
+	}
+	symbol[i] = '\0';
+
+	if (symbol[0] != '\0' && g_pending.rhs_count < 64)
+	{
+		strncpy(g_pending.rhs[g_pending.rhs_count], symbol, sizeof(g_pending.rhs[g_pending.rhs_count]) - 1);
+		g_pending.rhs[g_pending.rhs_count][sizeof(g_pending.rhs[g_pending.rhs_count]) - 1] = '\0';
+		g_pending.rhs_count++;
+	}
+}
+
+static int yytrace_fprintf(FILE *stream, const char *fmt, ...)
+{
+	char chunk[2048];
+	va_list ap;
+	int i;
+	(void)stream;
+
+	va_start(ap, fmt);
+	vsnprintf(chunk, sizeof(chunk), fmt, ap);
+	va_end(ap);
+
+	for (i = 0; chunk[i] != '\0'; i++)
+	{
+		if (chunk[i] == '\n')
+		{
+			g_trace_line[g_trace_line_len] = '\0';
+			parse_debug_line(g_trace_line);
+			g_trace_line_len = 0;
+			continue;
+		}
+
+		if (g_trace_line_len < (int)sizeof(g_trace_line) - 1)
+		{
+			g_trace_line[g_trace_line_len++] = chunk[i];
+		}
+	}
+
+	return 0;
+}
+
+static void print_reverse_derivation(void)
+{
+	int i, j;
+
+	printf("\nReverse derivation (top-down)\n");
+	printf("================================\n");
+
+	for (i = g_step_count - 1, j = 1; i >= 0; i--, j++)
+	{
+		int k;
+		printf("%d. %s ->", j, g_steps[i].lhs);
+		if (g_steps[i].rhs_count == 0)
+		{
+			printf(" epsilon");
+		}
+		else
+		{
+			for (k = 0; k < g_steps[i].rhs_count; k++)
+			{
+				printf(" %s", g_steps[i].rhs[k]);
+			}
+		}
+		printf("\n");
+	}
+}
+
+static int looks_like_nonterminal(const char *sym)
+{
+	if (sym == NULL || sym[0] == '\0')
+	{
+		return 0;
+	}
+	if (sym[0] >= 'a' && sym[0] <= 'z')
+	{
+		return 1;
+	}
+	return 0;
+}
+
+static int write_reverse_derivation_dot(const char *dot_path)
+{
+	FILE *f;
+	int node_id = 0;
+	int *labels;
+	int *leaf_nodes;
+	int leaf_count = 0;
+	int leaf_cap = 0;
+	int i;
+
+	if (g_step_count <= 0)
+	{
+		return -1;
+	}
+
+	f = fopen(dot_path, "w");
+	if (f == NULL)
+	{
+		return -1;
+	}
+
+	labels = (int *)calloc((size_t)g_step_count * 2 + 1024, sizeof(int));
+	if (labels == NULL)
+	{
+		fclose(f);
+		return -1;
+	}
+
+	leaf_cap = 1024;
+	leaf_nodes = (int *)malloc((size_t)leaf_cap * sizeof(int));
+	if (leaf_nodes == NULL)
+	{
+		free(labels);
+		fclose(f);
+		return -1;
+	}
+
+	fprintf(f, "digraph ReverseDerivationTree {\n");
+	fprintf(f, "  rankdir=TB;\n");
+	fprintf(f, "  node [shape=box, style=rounded, fontsize=10];\n");
+
+	fprintf(f, "  n%d [label=\"%s\"];\n", node_id, g_steps[g_step_count - 1].lhs);
+	leaf_nodes[leaf_count++] = node_id;
+	node_id++;
+
+	for (i = g_step_count - 1; i >= 0; i--)
+	{
+		int target = -1;
+		int li;
+		int k;
+
+		for (li = leaf_count - 1; li >= 0; li--)
+		{
+			if (strcmp(g_steps[i].lhs, g_steps[g_step_count - 1].lhs) == 0 && i == g_step_count - 1)
+			{
+				target = leaf_nodes[li];
+				break;
+			}
+			if (labels[leaf_nodes[li]] == i + 1)
+			{
+				target = leaf_nodes[li];
+				break;
+			}
+		}
+
+		if (target == -1)
+		{
+			for (li = leaf_count - 1; li >= 0; li--)
+			{
+				target = leaf_nodes[li];
+				if (looks_like_nonterminal(g_steps[i].lhs))
+				{
+					break;
+				}
+			}
+		}
+
+		if (target == -1)
+		{
+			continue;
+		}
+
+		for (li = 0; li < leaf_count; li++)
+		{
+			if (leaf_nodes[li] == target)
+			{
+				for (; li < leaf_count - 1; li++)
+				{
+					leaf_nodes[li] = leaf_nodes[li + 1];
+				}
+				leaf_count--;
+				break;
+			}
+		}
+
+		if (g_steps[i].rhs_count == 0)
+		{
+			fprintf(f, "  n%d [label=\"epsilon\"];\n", node_id);
+			fprintf(f, "  n%d -> n%d;\n", target, node_id);
+			node_id++;
+			continue;
+		}
+
+		for (k = 0; k < g_steps[i].rhs_count; k++)
+		{
+			fprintf(f, "  n%d [label=\"%s\"];\n", node_id, g_steps[i].rhs[k]);
+			fprintf(f, "  n%d -> n%d;\n", target, node_id);
+			if (looks_like_nonterminal(g_steps[i].rhs[k]))
+			{
+				if (leaf_count == leaf_cap)
+				{
+					int new_cap = leaf_cap * 2;
+					int *tmp = (int *)realloc(leaf_nodes, (size_t)new_cap * sizeof(int));
+					if (tmp == NULL)
+					{
+						free(leaf_nodes);
+						free(labels);
+						fclose(f);
+						return -1;
+					}
+					leaf_nodes = tmp;
+					leaf_cap = new_cap;
+				}
+				leaf_nodes[leaf_count++] = node_id;
+			}
+			labels[node_id] = i;
+			node_id++;
+		}
+	}
+
+	fprintf(f, "}\n");
+
+	free(leaf_nodes);
+	free(labels);
+	fclose(f);
+	return 0;
+}
+
+static int write_reverse_derivation_png(const char *png_path)
+{
+	int status;
+	pid_t pid;
+	char dot_path[4096];
+
+	snprintf(dot_path, sizeof(dot_path), "%s.dot", png_path);
+	if (write_reverse_derivation_dot(dot_path) != 0)
+	{
+		return -1;
+	}
+
+	pid = fork();
+	if (pid < 0)
+	{
+		return -1;
+	}
+
+	if (pid == 0)
+	{
+		execlp("dot", "dot", "-Tpng", dot_path, "-o", png_path, (char *)NULL);
+		_exit(127);
+	}
+
+	if (waitpid(pid, &status, 0) < 0)
+	{
+		return -1;
+	}
+
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+	{
+		return 0;
+	}
+
+	return -1;
+}
+
+static void free_derivation_steps(void)
+{
+	if (g_steps != NULL)
+	{
+		free(g_steps);
+		g_steps = NULL;
+	}
+	g_step_count = 0;
+	g_step_cap = 0;
+	reset_pending();
+}
 
 void yyerror(const char *s)
 {
@@ -610,20 +1002,57 @@ void yyerror(const char *s)
 int main(int argc, char **argv)
 {
     extern FILE *yyin;
+	int i;
+	const char *input_file = NULL;
+	const char *png_file = NULL;
 
-	if(argc<2)
+	if (argc == 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0))
 	{
-		sprintf(buff,"***process terminated*** [input error]: invalid number of command-line arguments");
+		printf("Usage: ./yapl <input_file> [--png out.png]\n");
+		printf("\n");
+		printf("Options:\n");
+		printf("  -h, --help       Show this help message and exit\n");
+		printf("  --png <path>     Write reverse derivation graph as PNG\n");
+		return 0;
+	}
+
+	for (i = 1; i < argc; i++)
+	{
+		if (strcmp(argv[i], "--png") == 0)
+		{
+			if (i + 1 >= argc)
+			{
+				sprintf(buff, "***process terminated*** [input error]: missing path after --png");
+				mode = 1;
+				yyerror(buff);
+			}
+			png_file = argv[++i];
+		}
+		else if (input_file == NULL)
+		{
+			input_file = argv[i];
+		}
+		else
+		{
+			sprintf(buff, "***process terminated*** [input error]: unexpected argument \"%s\"", argv[i]);
+			mode = 1;
+			yyerror(buff);
+		}
+	}
+
+	if(input_file == NULL)
+	{
+		sprintf(buff,"***process terminated*** [input error]: usage ./yapl <input_file> [--png out.png]");
 		mode=1;
 		yyerror(buff);
 		exit(1);
 	}
 
-	yyin=fopen(argv[1],"r");
+	yyin=fopen(input_file,"r");
 
 	if(yyin==NULL)
 	{
-		sprintf(buff,"***process terminated*** [input error]: no such file \"%s\" exists",argv[1]);
+		sprintf(buff,"***process terminated*** [input error]: no such file \"%s\" exists",input_file);
 		mode=1;
 		yyerror(buff);
 		exit(1);
@@ -632,6 +1061,7 @@ int main(int argc, char **argv)
 	{
 		do
 		{
+			yydebug = 1;
 			yyparse();
 		}
 		while(!feof(yyin));
@@ -644,6 +1074,21 @@ int main(int argc, char **argv)
 	printf("#pointers_declarations = %d\n",pointer_decls);
 	printf("#ifs_without_else = %d\n",ifs_wo_else);
 	printf("if-else max-depth = %d\n",((max<0)?0:max));
+	print_reverse_derivation();
+
+	if (png_file != NULL)
+	{
+		if (write_reverse_derivation_png(png_file) == 0)
+		{
+			printf("Reverse derivation PNG written to %s\n", png_file);
+		}
+		else
+		{
+			printf("Failed to write PNG file: %s\n", png_file);
+		}
+	}
+
+	free_derivation_steps();
 
 	return(0);
 }

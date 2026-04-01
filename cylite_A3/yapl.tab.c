@@ -70,6 +70,12 @@
 #line 2 "yapl.y"
 
 #include<stdio.h>
+#include<stdarg.h>
+#include<stdlib.h>
+#include<string.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+#include<unistd.h>
 extern char *yytext;
 int yylex(void);
 void yyerror(const char *s);
@@ -81,7 +87,40 @@ int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
 
-#line 85 "yapl.tab.c"
+#define YYDEBUG 1
+#define YYFPRINTF yytrace_fprintf
+
+typedef struct {
+	char lhs[128];
+	int rhs_count;
+	char rhs[64][128];
+} ReductionStep;
+
+typedef struct {
+	int active;
+	char lhs[128];
+	int rhs_count;
+	char rhs[64][128];
+} PendingReduction;
+
+static ReductionStep *g_steps = NULL;
+static int g_step_count = 0;
+static int g_step_cap = 0;
+static PendingReduction g_pending = {0};
+static char g_trace_line[8192];
+static int g_trace_line_len = 0;
+
+static void reset_pending(void);
+static void parse_debug_line(const char *line);
+static int yytrace_fprintf(FILE *stream, const char *fmt, ...);
+static void append_step(const char *lhs, char rhs[][128], int rhs_count);
+static void print_reverse_derivation(void);
+static int write_reverse_derivation_dot(const char *dot_path);
+static int write_reverse_derivation_png(const char *png_path);
+static int looks_like_nonterminal(const char *sym);
+static void free_derivation_steps(void);
+
+#line 124 "yapl.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -693,35 +732,35 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    56,    56,    57,    58,    59,    60,    64,    65,    66,
-      70,    74,    75,    79,    83,    84,    88,    89,    93,    94,
-      95,    96,    97,    98,    99,   100,   101,   102,   103,   104,
-     109,   110,   111,   112,   113,   114,   115,   119,   120,   121,
-     122,   123,   124,   128,   129,   133,   134,   135,   136,   140,
-     141,   142,   146,   147,   148,   152,   153,   154,   155,   156,
-     157,   161,   162,   163,   167,   168,   172,   173,   177,   178,
-     182,   183,   187,   188,   192,   196,   197,   201,   202,   203,
-     204,   205,   206,   207,   208,   209,   210,   211,   216,   217,
-     221,   225,   226,   227,   231,   232,   233,   234,   235,   236,
-     237,   238,   239,   240,   244,   245,   249,   250,   254,   255,
-     256,   257,   258,   259,   263,   264,   265,   266,   267,   268,
-     269,   270,   271,   272,   273,   274,   275,   276,   277,   278,
-     282,   283,   284,   288,   289,   293,   294,   298,   299,   300,
-     304,   305,   306,   307,   311,   312,   316,   317,   318,   322,
-     323,   324,   325,   326,   330,   331,   335,   336,   340,   344,
-     345,   346,   347,   351,   352,   356,   357,   361,   362,   366,
-     367,   368,   369,   370,   371,   372,   373,   374,   375,   376,
-     377,   378,   379,   383,   384,   385,   386,   390,   391,   396,
-     397,   401,   402,   406,   407,   408,   412,   413,   417,   418,
-     422,   423,   424,   428,   429,   430,   431,   432,   433,   434,
-     435,   436,   437,   438,   439,   440,   441,   442,   443,   444,
-     445,   446,   447,   448,   452,   453,   454,   458,   459,   460,
-     461,   465,   469,   470,   474,   475,   479,   483,   487,   488,
-     489,   490,   491,   492,   493,   494,   498,   499,   500,   504,
-     505,   509,   510,   514,   515,   519,   520,   524,   525,   529,
-     529,   534,   537,   536,   543,   545,   550,   551,   552,   553,
-     554,   555,   556,   557,   561,   562,   563,   564,   565,   569,
-     570,   574,   575,   579,   580,   584,   585
+       0,    95,    95,    96,    97,    98,    99,   103,   104,   105,
+     109,   113,   114,   118,   122,   123,   127,   128,   132,   133,
+     134,   135,   136,   137,   138,   139,   140,   141,   142,   143,
+     148,   149,   150,   151,   152,   153,   154,   158,   159,   160,
+     161,   162,   163,   167,   168,   172,   173,   174,   175,   179,
+     180,   181,   185,   186,   187,   191,   192,   193,   194,   195,
+     196,   200,   201,   202,   206,   207,   211,   212,   216,   217,
+     221,   222,   226,   227,   231,   235,   236,   240,   241,   242,
+     243,   244,   245,   246,   247,   248,   249,   250,   255,   256,
+     260,   264,   265,   266,   270,   271,   272,   273,   274,   275,
+     276,   277,   278,   279,   283,   284,   288,   289,   293,   294,
+     295,   296,   297,   298,   302,   303,   304,   305,   306,   307,
+     308,   309,   310,   311,   312,   313,   314,   315,   316,   317,
+     321,   322,   323,   327,   328,   332,   333,   337,   338,   339,
+     343,   344,   345,   346,   350,   351,   355,   356,   357,   361,
+     362,   363,   364,   365,   369,   370,   374,   375,   379,   383,
+     384,   385,   386,   390,   391,   395,   396,   400,   401,   405,
+     406,   407,   408,   409,   410,   411,   412,   413,   414,   415,
+     416,   417,   418,   422,   423,   424,   425,   429,   430,   435,
+     436,   440,   441,   445,   446,   447,   451,   452,   456,   457,
+     461,   462,   463,   467,   468,   469,   470,   471,   472,   473,
+     474,   475,   476,   477,   478,   479,   480,   481,   482,   483,
+     484,   485,   486,   487,   491,   492,   493,   497,   498,   499,
+     500,   504,   508,   509,   513,   514,   518,   522,   526,   527,
+     528,   529,   530,   531,   532,   533,   537,   538,   539,   543,
+     544,   548,   549,   553,   554,   558,   559,   563,   564,   568,
+     568,   573,   576,   575,   582,   584,   589,   590,   591,   592,
+     593,   594,   595,   596,   600,   601,   602,   603,   604,   608,
+     609,   613,   614,   618,   619,   623,   624
 };
 #endif
 
@@ -2096,79 +2135,91 @@ yyreduce:
   switch (yyn)
     {
   case 7: /* constant: I_CONSTANT  */
-#line 64 "yapl.y"
+#line 103 "yapl.y"
                      {int_consts++;}
-#line 2102 "yapl.tab.c"
+#line 2141 "yapl.tab.c"
     break;
 
   case 167: /* declarator: pointer direct_declarator  */
-#line 361 "yapl.y"
+#line 400 "yapl.y"
                                     {pointer_decls++;}
-#line 2108 "yapl.tab.c"
+#line 2147 "yapl.tab.c"
+    break;
+
+  case 257: /* elif_list: ELIF '(' expression ')' statement  */
+#line 563 "yapl.y"
+                                            { ladder_len++; }
+#line 2153 "yapl.tab.c"
+    break;
+
+  case 258: /* elif_list: elif_list ELIF '(' expression ')' statement  */
+#line 564 "yapl.y"
+                                                      { ladder_len++; }
+#line 2159 "yapl.tab.c"
     break;
 
   case 259: /* $@1: %empty  */
-#line 529 "yapl.y"
+#line 568 "yapl.y"
                                            { ladder_len++; (yyvsp[0].val) = (ladder_len-1); }
-#line 2114 "yapl.tab.c"
+#line 2165 "yapl.tab.c"
     break;
 
   case 260: /* selection_statement: IF '(' expression ')' statement ELSE $@1 statement  */
-#line 530 "yapl.y"
+#line 569 "yapl.y"
         { 
             if(ladder_len >= max) { max = ladder_len; } 
             ladder_len = (yyvsp[-2].val); 
         }
-#line 2123 "yapl.tab.c"
+#line 2174 "yapl.tab.c"
     break;
 
   case 261: /* selection_statement: IF '(' expression ')' statement  */
-#line 535 "yapl.y"
+#line 574 "yapl.y"
         { ifs_wo_else++; }
-#line 2129 "yapl.tab.c"
+#line 2180 "yapl.tab.c"
     break;
 
   case 262: /* $@2: %empty  */
-#line 537 "yapl.y"
+#line 576 "yapl.y"
         { ladder_len++; (yyvsp[0].val) = (ladder_len-1); }
-#line 2135 "yapl.tab.c"
+#line 2186 "yapl.tab.c"
     break;
 
   case 263: /* selection_statement: IF '(' expression ')' statement elif_list ELSE $@2 statement  */
-#line 539 "yapl.y"
+#line 578 "yapl.y"
         { 
             if(ladder_len >= max) { max = ladder_len; } 
             ladder_len = (yyvsp[-2].val); 
         }
-#line 2144 "yapl.tab.c"
+#line 2195 "yapl.tab.c"
     break;
 
   case 264: /* selection_statement: IF '(' expression ')' statement elif_list  */
-#line 544 "yapl.y"
+#line 583 "yapl.y"
         { /* Logic for if-elif without final else */ }
-#line 2150 "yapl.tab.c"
+#line 2201 "yapl.tab.c"
     break;
 
   case 279: /* translation_unit: external_declaration  */
-#line 569 "yapl.y"
+#line 608 "yapl.y"
                                {global_declarations++;}
-#line 2156 "yapl.tab.c"
+#line 2207 "yapl.tab.c"
     break;
 
   case 280: /* translation_unit: translation_unit external_declaration  */
-#line 570 "yapl.y"
+#line 609 "yapl.y"
                                                 {global_declarations++;}
-#line 2162 "yapl.tab.c"
+#line 2213 "yapl.tab.c"
     break;
 
   case 281: /* external_declaration: function_definition  */
-#line 574 "yapl.y"
+#line 613 "yapl.y"
                               {func_definitions++;}
-#line 2168 "yapl.tab.c"
+#line 2219 "yapl.tab.c"
     break;
 
 
-#line 2172 "yapl.tab.c"
+#line 2223 "yapl.tab.c"
 
       default: break;
     }
@@ -2361,16 +2412,369 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 588 "yapl.y"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#line 627 "yapl.y"
 
 char buff[2048];
 
 int yylex(void);
 int mode=-1;
+
+static void reset_pending(void)
+{
+	g_pending.active = 0;
+	g_pending.lhs[0] = '\0';
+	g_pending.rhs_count = 0;
+}
+
+static void append_step(const char *lhs, char rhs[][128], int rhs_count)
+{
+	int i;
+
+	if (g_step_count == g_step_cap)
+	{
+		int new_cap = (g_step_cap == 0) ? 256 : (g_step_cap * 2);
+		ReductionStep *tmp = (ReductionStep *)realloc(g_steps, (size_t)new_cap * sizeof(ReductionStep));
+		if (tmp == NULL)
+		{
+			return;
+		}
+		g_steps = tmp;
+		g_step_cap = new_cap;
+	}
+
+	strncpy(g_steps[g_step_count].lhs, lhs, sizeof(g_steps[g_step_count].lhs) - 1);
+	g_steps[g_step_count].lhs[sizeof(g_steps[g_step_count].lhs) - 1] = '\0';
+	g_steps[g_step_count].rhs_count = rhs_count;
+
+	for (i = 0; i < rhs_count && i < 64; i++)
+	{
+		strncpy(g_steps[g_step_count].rhs[i], rhs[i], sizeof(g_steps[g_step_count].rhs[i]) - 1);
+		g_steps[g_step_count].rhs[i][sizeof(g_steps[g_step_count].rhs[i]) - 1] = '\0';
+	}
+
+	g_step_count++;
+}
+
+static void parse_debug_line(const char *line)
+{
+	const char *p;
+	char symbol[128];
+	int i = 0;
+
+	if (strncmp(line, "Reducing stack by rule ", 23) == 0)
+	{
+		reset_pending();
+		g_pending.active = 1;
+		return;
+	}
+
+	if (!g_pending.active)
+	{
+		return;
+	}
+
+	p = strstr(line, "-> $$ = nterm ");
+	if (p != NULL)
+	{
+		p += 14;
+		while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' && i < 127)
+		{
+			symbol[i++] = *p;
+			p++;
+		}
+		symbol[i] = '\0';
+		if (symbol[0] != '\0')
+		{
+			strncpy(g_pending.lhs, symbol, sizeof(g_pending.lhs) - 1);
+			g_pending.lhs[sizeof(g_pending.lhs) - 1] = '\0';
+			append_step(g_pending.lhs, g_pending.rhs, g_pending.rhs_count);
+		}
+		reset_pending();
+		return;
+	}
+
+	p = strstr(line, " = token ");
+	if (p == NULL)
+	{
+		p = strstr(line, " = nterm ");
+	}
+	if (p == NULL)
+	{
+		return;
+	}
+
+	p += 9;
+	i = 0;
+	while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' && i < 127)
+	{
+		symbol[i++] = *p;
+		p++;
+	}
+	symbol[i] = '\0';
+
+	if (symbol[0] != '\0' && g_pending.rhs_count < 64)
+	{
+		strncpy(g_pending.rhs[g_pending.rhs_count], symbol, sizeof(g_pending.rhs[g_pending.rhs_count]) - 1);
+		g_pending.rhs[g_pending.rhs_count][sizeof(g_pending.rhs[g_pending.rhs_count]) - 1] = '\0';
+		g_pending.rhs_count++;
+	}
+}
+
+static int yytrace_fprintf(FILE *stream, const char *fmt, ...)
+{
+	char chunk[2048];
+	va_list ap;
+	int i;
+	(void)stream;
+
+	va_start(ap, fmt);
+	vsnprintf(chunk, sizeof(chunk), fmt, ap);
+	va_end(ap);
+
+	for (i = 0; chunk[i] != '\0'; i++)
+	{
+		if (chunk[i] == '\n')
+		{
+			g_trace_line[g_trace_line_len] = '\0';
+			parse_debug_line(g_trace_line);
+			g_trace_line_len = 0;
+			continue;
+		}
+
+		if (g_trace_line_len < (int)sizeof(g_trace_line) - 1)
+		{
+			g_trace_line[g_trace_line_len++] = chunk[i];
+		}
+	}
+
+	return 0;
+}
+
+static void print_reverse_derivation(void)
+{
+	int i, j;
+
+	printf("\nReverse derivation (top-down)\n");
+	printf("================================\n");
+
+	for (i = g_step_count - 1, j = 1; i >= 0; i--, j++)
+	{
+		int k;
+		printf("%d. %s ->", j, g_steps[i].lhs);
+		if (g_steps[i].rhs_count == 0)
+		{
+			printf(" epsilon");
+		}
+		else
+		{
+			for (k = 0; k < g_steps[i].rhs_count; k++)
+			{
+				printf(" %s", g_steps[i].rhs[k]);
+			}
+		}
+		printf("\n");
+	}
+}
+
+static int looks_like_nonterminal(const char *sym)
+{
+	if (sym == NULL || sym[0] == '\0')
+	{
+		return 0;
+	}
+	if (sym[0] >= 'a' && sym[0] <= 'z')
+	{
+		return 1;
+	}
+	return 0;
+}
+
+static int write_reverse_derivation_dot(const char *dot_path)
+{
+	FILE *f;
+	int node_id = 0;
+	int *labels;
+	int *leaf_nodes;
+	int leaf_count = 0;
+	int leaf_cap = 0;
+	int i;
+
+	if (g_step_count <= 0)
+	{
+		return -1;
+	}
+
+	f = fopen(dot_path, "w");
+	if (f == NULL)
+	{
+		return -1;
+	}
+
+	labels = (int *)calloc((size_t)g_step_count * 2 + 1024, sizeof(int));
+	if (labels == NULL)
+	{
+		fclose(f);
+		return -1;
+	}
+
+	leaf_cap = 1024;
+	leaf_nodes = (int *)malloc((size_t)leaf_cap * sizeof(int));
+	if (leaf_nodes == NULL)
+	{
+		free(labels);
+		fclose(f);
+		return -1;
+	}
+
+	fprintf(f, "digraph ReverseDerivationTree {\n");
+	fprintf(f, "  rankdir=TB;\n");
+	fprintf(f, "  node [shape=box, style=rounded, fontsize=10];\n");
+
+	fprintf(f, "  n%d [label=\"%s\"];\n", node_id, g_steps[g_step_count - 1].lhs);
+	leaf_nodes[leaf_count++] = node_id;
+	node_id++;
+
+	for (i = g_step_count - 1; i >= 0; i--)
+	{
+		int target = -1;
+		int li;
+		int k;
+
+		for (li = leaf_count - 1; li >= 0; li--)
+		{
+			if (strcmp(g_steps[i].lhs, g_steps[g_step_count - 1].lhs) == 0 && i == g_step_count - 1)
+			{
+				target = leaf_nodes[li];
+				break;
+			}
+			if (labels[leaf_nodes[li]] == i + 1)
+			{
+				target = leaf_nodes[li];
+				break;
+			}
+		}
+
+		if (target == -1)
+		{
+			for (li = leaf_count - 1; li >= 0; li--)
+			{
+				target = leaf_nodes[li];
+				if (looks_like_nonterminal(g_steps[i].lhs))
+				{
+					break;
+				}
+			}
+		}
+
+		if (target == -1)
+		{
+			continue;
+		}
+
+		for (li = 0; li < leaf_count; li++)
+		{
+			if (leaf_nodes[li] == target)
+			{
+				for (; li < leaf_count - 1; li++)
+				{
+					leaf_nodes[li] = leaf_nodes[li + 1];
+				}
+				leaf_count--;
+				break;
+			}
+		}
+
+		if (g_steps[i].rhs_count == 0)
+		{
+			fprintf(f, "  n%d [label=\"epsilon\"];\n", node_id);
+			fprintf(f, "  n%d -> n%d;\n", target, node_id);
+			node_id++;
+			continue;
+		}
+
+		for (k = 0; k < g_steps[i].rhs_count; k++)
+		{
+			fprintf(f, "  n%d [label=\"%s\"];\n", node_id, g_steps[i].rhs[k]);
+			fprintf(f, "  n%d -> n%d;\n", target, node_id);
+			if (looks_like_nonterminal(g_steps[i].rhs[k]))
+			{
+				if (leaf_count == leaf_cap)
+				{
+					int new_cap = leaf_cap * 2;
+					int *tmp = (int *)realloc(leaf_nodes, (size_t)new_cap * sizeof(int));
+					if (tmp == NULL)
+					{
+						free(leaf_nodes);
+						free(labels);
+						fclose(f);
+						return -1;
+					}
+					leaf_nodes = tmp;
+					leaf_cap = new_cap;
+				}
+				leaf_nodes[leaf_count++] = node_id;
+			}
+			labels[node_id] = i;
+			node_id++;
+		}
+	}
+
+	fprintf(f, "}\n");
+
+	free(leaf_nodes);
+	free(labels);
+	fclose(f);
+	return 0;
+}
+
+static int write_reverse_derivation_png(const char *png_path)
+{
+	int status;
+	pid_t pid;
+	char dot_path[4096];
+
+	snprintf(dot_path, sizeof(dot_path), "%s.dot", png_path);
+	if (write_reverse_derivation_dot(dot_path) != 0)
+	{
+		return -1;
+	}
+
+	pid = fork();
+	if (pid < 0)
+	{
+		return -1;
+	}
+
+	if (pid == 0)
+	{
+		execlp("dot", "dot", "-Tpng", dot_path, "-o", png_path, (char *)NULL);
+		_exit(127);
+	}
+
+	if (waitpid(pid, &status, 0) < 0)
+	{
+		return -1;
+	}
+
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+	{
+		return 0;
+	}
+
+	return -1;
+}
+
+static void free_derivation_steps(void)
+{
+	if (g_steps != NULL)
+	{
+		free(g_steps);
+		g_steps = NULL;
+	}
+	g_step_count = 0;
+	g_step_cap = 0;
+	reset_pending();
+}
 
 void yyerror(const char *s)
 {
@@ -2387,20 +2791,58 @@ void yyerror(const char *s)
 int main(int argc, char **argv)
 {
     extern FILE *yyin;
+	int i;
+	const char *input_file = NULL;
+	const char *dot_file = NULL;
+	const char *png_file = NULL;
 
-	if(argc<2)
+	for (i = 1; i < argc; i++)
 	{
-		sprintf(buff,"***process terminated*** [input error]: invalid number of command-line arguments");
+		if (strcmp(argv[i], "--dot") == 0)
+		{
+			if (i + 1 >= argc)
+			{
+				sprintf(buff, "***process terminated*** [input error]: missing path after --dot");
+				mode = 1;
+				yyerror(buff);
+			}
+			dot_file = argv[++i];
+		}
+		else if (strcmp(argv[i], "--png") == 0)
+		{
+			if (i + 1 >= argc)
+			{
+				sprintf(buff, "***process terminated*** [input error]: missing path after --png");
+				mode = 1;
+				yyerror(buff);
+			}
+			png_file = argv[++i];
+		}
+		else if (input_file == NULL)
+		{
+			input_file = argv[i];
+		}
+		else
+		{
+			sprintf(buff, "***process terminated*** [input error]: unexpected argument \"%s\"", argv[i]);
+			mode = 1;
+			yyerror(buff);
+		}
+	}
+
+	if(input_file == NULL)
+	{
+		sprintf(buff,"***process terminated*** [input error]: usage ./yapl <input_file> [--dot out.dot] [--png out.png]");
 		mode=1;
 		yyerror(buff);
 		exit(1);
 	}
 
-	yyin=fopen(argv[1],"r");
+	yyin=fopen(input_file,"r");
 
 	if(yyin==NULL)
 	{
-		sprintf(buff,"***process terminated*** [input error]: no such file \"%s\" exists",argv[1]);
+		sprintf(buff,"***process terminated*** [input error]: no such file \"%s\" exists",input_file);
 		mode=1;
 		yyerror(buff);
 		exit(1);
@@ -2409,6 +2851,7 @@ int main(int argc, char **argv)
 	{
 		do
 		{
+			yydebug = 1;
 			yyparse();
 		}
 		while(!feof(yyin));
@@ -2421,6 +2864,33 @@ int main(int argc, char **argv)
 	printf("#pointers_declarations = %d\n",pointer_decls);
 	printf("#ifs_without_else = %d\n",ifs_wo_else);
 	printf("if-else max-depth = %d\n",((max<0)?0:max));
+	print_reverse_derivation();
+
+	if (dot_file != NULL)
+	{
+		if (write_reverse_derivation_dot(dot_file) == 0)
+		{
+			printf("Reverse derivation DOT written to %s\n", dot_file);
+		}
+		else
+		{
+			printf("Failed to write DOT file: %s\n", dot_file);
+		}
+	}
+
+	if (png_file != NULL)
+	{
+		if (write_reverse_derivation_png(png_file) == 0)
+		{
+			printf("Reverse derivation PNG written to %s\n", png_file);
+		}
+		else
+		{
+			printf("Failed to write PNG file: %s\n", png_file);
+		}
+	}
+
+	free_derivation_steps();
 
 	return(0);
 }
