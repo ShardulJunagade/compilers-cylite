@@ -66,7 +66,7 @@ We introduced the following terminal tokens into the parser to represent the cor
 \begin{figure}[h!]
     \centering
     % Replace the placeholder below with your actual image filename
-    \includegraphics[width=0.8\textwidth]{Images/imgh1.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/imgh1.jpeg}
     \caption{Implementation of the new CYLite tokens in the lexical analyzer.}
     \label{fig:lexical_tokens}
 \end{figure}
@@ -183,7 +183,7 @@ As noted in the initial automaton analysis, the introduction of CYLite's advance
 \begin{figure}[h!]
     \centering
     % Replace the placeholder below with your actual image filename
-    \includegraphics[width=0.8\textwidth]{Images/image2.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image2.jpeg}
     \caption{Identification of the conflicting states in the LALR(1) automaton.}
     \label{fig:conflicting_states}
 \end{figure}
@@ -202,7 +202,7 @@ One of the identified conflicts occurs in \textbf{State 27} and involves the \te
 \begin{figure}[h!]
     \centering
     % Replace the placeholder below with your actual image filename
-    \includegraphics[width=0.8\textwidth]{Images/image3.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image3.jpeg}
     \caption{Example of a shift/reduce conflict involving the \texttt{ATOMIC} keyword.}
     \label{fig:ifelse_dangling}
 \end{figure}
@@ -221,7 +221,7 @@ Another significant conflict surfaces in \textbf{State 345}, representing a \tex
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/image4.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image4.jpeg}
     \caption{Shift/Reduce conflict involving abstract and concrete pointer declarators in State 345.}
     \label{fig:pointer_conflict}
 \end{figure}
@@ -249,7 +249,7 @@ The most prominent structural ambiguities introduced by the CYLite extensions oc
 \begin{figure}[h!]
     \centering
     % Replace the placeholder below with your actual image filename
-    \includegraphics[width=0.8\textwidth]{Images/image5.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image5.jpeg}
     \caption{Shift/Reduce conflict involving the Dangling-Else and \texttt{elif} ambiguity in State 473.}
     \label{fig:dangling_else_conflict}
 \end{figure}
@@ -275,7 +275,7 @@ The dangling-else ambiguity documented in State 473 propagates directly into the
 \textbf{Exact Productions Involved:}
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/image6.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image6.jpeg}
     \caption{Shift/Reduce conflict in State 492 demonstrating propagation within \texttt{elif} chains.}
     \label{fig:elif_chain_conflict}
 \end{figure}
@@ -297,7 +297,7 @@ The sole \textbf{Reduce/Reduce conflict} in the LALR(1) automaton surfaces in \t
 \textbf{Exact Productions Involved:}
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.8\textwidth]{/Users/tejasmacipad/Downloads/A3/compilers-cylite/cylite_A3/report/Images/image7.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image7.jpeg}
     \caption{Reduce/Reduce conflict in State 515 illustrating the comma operator ambiguity.}
     \label{fig:comma_conflict}
 \end{figure}
@@ -352,7 +352,7 @@ The \texttt{selection\_statement} was restructured to perform three concurrent t
 \textbf{Changes made in the grammar:}
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/image8.jpeg}
+    \includegraphics[width=0.8\textwidth]{./Images/image8.jpeg}
     \caption{changes made in the grammar}
     \label{fig:conflict_removal}
 \end{figure}
@@ -425,7 +425,7 @@ declarator
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{Images/image9.jpeg}
+    \includegraphics[width=\textwidth]{./Images/image9.jpeg}
     \caption{Git Diff showing the relocation of pointer actions and the use of precedence for the ATOMIC keyword.}
     \label{fig:atomic_pointer_diff}
 \end{figure}
@@ -484,7 +484,7 @@ type_qualifier
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{Images/image10.jpeg}
+    \includegraphics[width=\textwidth]{./Images/image10.jpeg}
     \caption{Git Diff showing the introduction of parenthesis precedence and the ATOMIC qualifier override.}
     \label{fig:atomic_diff}
 \end{figure}
@@ -532,7 +532,7 @@ The \texttt{FOR} loop's \texttt{RANGE} clause was modified to accept only \textt
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{Images/image11.jpeg} % ERROR: File image_3dc6fe.png is missing from the directory.
+    \includegraphics[width=\textwidth]{./Images/image11.jpeg} % ERROR: File image_3dc6fe.png is missing from the directory.
     \caption{Final Git diff showing rule unification for expressions and contextual constraints in the FOR loop.}
     \label{fig:comma_diff}
 \end{figure}
