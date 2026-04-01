@@ -2793,22 +2793,21 @@ int main(int argc, char **argv)
     extern FILE *yyin;
 	int i;
 	const char *input_file = NULL;
-	const char *dot_file = NULL;
 	const char *png_file = NULL;
+
+	if (argc == 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0))
+	{
+		printf("Usage: ./yapl <input_file> [--png out.png]\n");
+		printf("\n");
+		printf("Options:\n");
+		printf("  -h, --help       Show this help message and exit\n");
+		printf("  --png <path>     Write reverse derivation graph as PNG\n");
+		return 0;
+	}
 
 	for (i = 1; i < argc; i++)
 	{
-		if (strcmp(argv[i], "--dot") == 0)
-		{
-			if (i + 1 >= argc)
-			{
-				sprintf(buff, "***process terminated*** [input error]: missing path after --dot");
-				mode = 1;
-				yyerror(buff);
-			}
-			dot_file = argv[++i];
-		}
-		else if (strcmp(argv[i], "--png") == 0)
+		if (strcmp(argv[i], "--png") == 0)
 		{
 			if (i + 1 >= argc)
 			{
@@ -2832,7 +2831,7 @@ int main(int argc, char **argv)
 
 	if(input_file == NULL)
 	{
-		sprintf(buff,"***process terminated*** [input error]: usage ./yapl <input_file> [--dot out.dot] [--png out.png]");
+		sprintf(buff,"***process terminated*** [input error]: usage ./yapl <input_file> [--png out.png]");
 		mode=1;
 		yyerror(buff);
 		exit(1);
@@ -2865,18 +2864,6 @@ int main(int argc, char **argv)
 	printf("#ifs_without_else = %d\n",ifs_wo_else);
 	printf("if-else max-depth = %d\n",((max<0)?0:max));
 	print_reverse_derivation();
-
-	if (dot_file != NULL)
-	{
-		if (write_reverse_derivation_dot(dot_file) == 0)
-		{
-			printf("Reverse derivation DOT written to %s\n", dot_file);
-		}
-		else
-		{
-			printf("Failed to write DOT file: %s\n", dot_file);
-		}
-	}
 
 	if (png_file != NULL)
 	{

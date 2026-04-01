@@ -1,10 +1,11 @@
-# Assignment-3 Runbook (Up to Part 3)
+# Assignment-3 Runbook (Up to Part 4)
 
 This runbook is for the workspace folder `cylite_A3` and covers:
 - Building and validating parser changes
 - Running Part 1 and Part 2 checks
 - Running Part 3 (reverse derivation tree) in terminal
 - Generating Graphviz visualization for Part 3
+- Running Part 4 (LALR(1) parsing table output in matrix format)
 
 ## 1. Prerequisites
 
@@ -107,7 +108,51 @@ For report/demo:
 - Short explanation of CLI flags:
   - `--png <path>`
 
-## 6. Common issues
+## 6. Part 4: Parsing Table Output (Matrix Format)
+
+Part 4 requires ACTION and GOTO parsing tables in tabular form.
+
+Implementation details:
+- A Python script parses `yapl.output` directly (no manual table reconstruction).
+- Outputs are split into:
+  - ACTION table (terminals): `part4/action_table.csv`
+  - GOTO table (non-terminals): `part4/goto_table.csv`
+- Summary file:
+  - `part4/parsing_table_summary.md`
+- HTML single-matrix view (ACTION + GOTO in one table):
+  - `part4/parsing_table_matrix.html`
+
+### 6.1 Generate Part 4 outputs via Makefile
+
+```bash
+cd cylite_A3
+make part4
+```
+
+This runs:
+- `bison -v -d yapl.y` (refreshes `yapl.output`)
+- `python3 part4/generate_parsing_table.py yapl.output part4`
+
+### 6.2 Manual command (alternative)
+
+```bash
+bison -v -d yapl.y
+python3 part4/generate_parsing_table.py yapl.output part4
+```
+
+### 6.3 Output artifacts
+
+- `part4/action_table.csv`
+- `part4/goto_table.csv`
+- `part4/parsing_table_summary.md`
+- `part4/parsing_table_matrix.html`
+
+The HTML output displays a single matrix in this structure:
+- `State | ACTION terminals... | GOTO non-terminals...`
+- grouped section headers for ACTION and GOTO
+- sticky headers/state column for easier navigation of large tables
+
+## 7. Common issues
 
 - `dot: command not found`
   - Install Graphviz and re-run.
@@ -124,7 +169,7 @@ For report/demo:
 ./yapl part3/tests/rdt_extensions.cyl > part3/parse_output.txt
 ```
 
-## 7. Added Part-3 test inputs
+## 8. Added Part-3 test inputs
 
 New parser-focused CYLite tests were added under `part3/tests`:
 - `part3/tests/rdt_basic.cyl`
@@ -139,4 +184,12 @@ Suggested validation commands:
 ./yapl part3/tests/rdt_basic.cyl --png part3/tests/rdt_basic.png
 ./yapl part3/tests/rdt_extensions.cyl --png part3/tests/rdt_extensions.png
 ./yapl part3/tests/rdt_print_strings.cyl --png part3/tests/rdt_print_strings.png
+```
+
+## 9. Assignment-wide runner
+
+To build and run current assignment tests (Part 3 set):
+
+```bash
+./run_tests.sh
 ```
