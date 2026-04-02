@@ -38,6 +38,15 @@ extern int sym_type(const char *);  /* returns type from symbol table */
 
 static void comment(void);
 static int check_type(void);
+static void update_position(const char *text);
+
+int yyline = 1;
+int yycol = 1;
+int yytok_line = 1;
+int yytok_col = 1;
+
+/* Save token start position and advance scanner line/column on every match. */
+#define YY_USER_ACTION yytok_line = yyline; yytok_col = yycol; update_position(yytext);
 %}
 
 %%
@@ -146,17 +155,44 @@ static void comment(void)
     int c;
 
     while ((c = input()) != 0)
+    {
+        if (c == '\n')
+        {
+            yyline++;
+            yycol = 1;
+        }
+        else
+        {
+            yycol++;
+        }
+
         if (c == '*')
         {
             while ((c = input()) == '*')
-                ;
+            {
+                yycol++;
+            }
 
             if (c == '/')
+            {
+                yycol++;
                 return;
+            }
 
             if (c == 0)
                 break;
+
+            if (c == '\n')
+            {
+                yyline++;
+                yycol = 1;
+            }
+            else
+            {
+                yycol++;
+            }
         }
+    }
 
 	sprintf(buff,"***lexing terminated*** [lexer error]: ill-formed comment");
 	mode=0;
@@ -170,5 +206,23 @@ static int check_type(void)
     {
         default:                          /* includes undefined */
         return IDENTIFIER;
+    }
+}
+
+static void update_position(const char *text)
+{
+    int i;
+
+    for (i = 0; text[i] != '\0'; i++)
+    {
+        if (text[i] == '\n')
+        {
+            yyline++;
+            yycol = 1;
+        }
+        else
+        {
+            yycol++;
+        }
     }
 }
