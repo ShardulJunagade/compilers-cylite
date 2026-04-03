@@ -1,5 +1,7 @@
 # CYLite Assignment 3
 
+Main submission document: [A3_report.pdf](./A3_report.pdf)
+
 LALR(1) parser construction, conflict analysis and resolution, reverse derivation output, parsing table generation, and syntax diagnostics for the CYLite language (YAPL extension).
 
 ## Project Scope

@@ -10,10 +10,10 @@ Assignment 1: [Language Specification](./CYLite_lang_spec.pdf)
 
 Assignment 2: Lexical Analyzer
 - Code: [`cylite`](./cylite/)
-- Report: [Lexical Analyzer Report](./cylite/A2_report.pdf)
+- Report: [Lexical Analyzer Report](./cylite/A2_report.pdf) (Main Submission)
 - Running Instructions: [RUNNING.md](./cylite/RUNNING.md)
 
 Assignment 3: 
 - Code: [`cylite_A3`](./cylite_A3/)
-- Report: [Assignment 3 Report](./cylite_A3/A3_report.pdf)
+- Report: [Assignment 3 Report](./cylite_A3/A3_report.pdf) (Main Submission)
 - Running Instructions: [README.md](./cylite_A3/README.md)
