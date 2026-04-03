@@ -141,6 +141,10 @@ Generated artifacts:
 - `part4/parsing_table_summary.md`
 - `part4/parsing_table_matrix.html`
 
+Deployed matrix view:
+
+- https://sharduljunagade.github.io/compilers-cylite/cylite_A3/part4/parsing_table_matrix.html
+
 ### Part 5: Error Diagnostics
 
 Run diagnostics suite on intentionally invalid programs:

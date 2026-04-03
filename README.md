@@ -15,5 +15,5 @@ Assignment 2: Lexical Analyzer
 
 Assignment 3: 
 - Code: [`cylite_A3`](./cylite_A3/)
-- Report: [Assignment 3 Report](./cylite_A3/report/report.pdf)
+- Report: [Assignment 3 Report](./cylite_A3/A3_report.pdf)
 - Running Instructions: [README.md](./cylite_A3/README.md)

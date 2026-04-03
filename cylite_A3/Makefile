@@ -12,7 +12,7 @@ part3:
 	./yapl part3/tests/rdt_print_strings.cyl --svg part3/tests/rdt_print_strings.svg > part3/tests/output_rdt_print_strings.txt
 
 part4: yapl.output
-	python3 part4/generate_parsing_table.py yapl.output part4 > part4/terminal_output.txt
+	python3 part4/generate_parsing_table.py yapl.output part4
 	@echo "Part 4 tables generated in part4/"
 
 part5: yapl

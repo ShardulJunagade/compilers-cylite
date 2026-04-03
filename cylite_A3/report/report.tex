@@ -47,6 +47,7 @@
         \textbf{Course:} & CS327 Compilers \\
         \textbf{Assignment:} & Lab Assignment 3 \\
         \textbf{Project:} & CYLite (YAPL Extension) \\
+        \textbf{Repository:} & \href{https://github.com/ShardulJunagade/compilers-cylite}{compilers-cylite} \\
     \end{tabular}
 
     \vspace{1.4cm}
@@ -1126,6 +1127,9 @@ We recommend viewing the HTML file in a web browser. The HTML renderer intention
 \texttt{State | ACTION terminals ... | GOTO non-terminals ...}
 \end{center}
 
+Direct browser link for the deployed matrix:
+\href{https://sharduljunagade.github.io/compilers-cylite/cylite_A3/part4/parsing_table_matrix.html}{\texttt{parsing\_table\_matrix.html}}
+
 To make a large LALR table usable, the UX-level such as grouped section headers for ACTION and GOTO, sticky top headers, sticky state column, and scroll container for high-column matrices were included:
 % \begin{itemize}
 %     \item grouped section headers for ACTION and GOTO,
@@ -1272,6 +1276,8 @@ line 4, column 5: unexpected token "@"
 \newpage
 \section{Part 6: Additional Information}
 
+\textbf{Note:} Additional implementation and analysis details were also included within earlier parts of this report wherever they were most relevant to the discussion (for example, directly alongside conflict explanations, derivation design, parsing-table generation, and diagnostics architecture) and the appendix at the end is also a part of additional information. This section consolidates supplementary points that are helpful as a standalone summary for Part 6.
+
 \subsection{Challenges}
 
 \begin{itemize}
@@ -1283,6 +1289,13 @@ line 4, column 5: unexpected token "@"
 
 This assignment gave us a complete hands-on view of how a practical parser is built and stabilized, not just how it works in theory. We learned to read LALR(1) states from \texttt{yapl.output}, pinpoint real conflict sources, and resolve them using grammar restructuring, precedence, and safer semantic-action placement. We also learned that good compiler work is not only about accepting valid programs: reverse-derivation tracing, table extraction, and line-column diagnostics made the parser easier to inspect, debug, and explain.
 
+\subsection{Implementation Details Summary}
+
+The implementation was carried out as a staged workflow across the assignment parts. First, we extended the lexer and parser to support CYLite features such as \texttt{elif}, \texttt{pass}, \texttt{try-except}, \texttt{print}, and range-style iteration forms. Next, we resolved parser conflicts by combining precedence directives with targeted grammar refactoring, including safer placement of semantic actions for counters. After stabilizing the grammar, we added reverse-derivation extraction , automated ACTION/GOTO table generation from \texttt{yapl.output}, and structured line-column error diagnostics with expected-token hints . Together, these steps produced a parser that is both feature-complete for CYLite and easier to validate, debug, and extend.
+
+\subsection{Analysis Highlights}
+
+One key outcome was turning parser development into a reproducible workflow rather than a one-time debugging exercise. After each grammar update, we regenerated \\ \texttt{yapl.output}, re-checked conflict states, and validated behavior with targeted test programs that reflected the exact ambiguity being fixed. For analysis, we used both structural evidence (state transitions, reduction paths, precedence decisions) and behavioral evidence (before/after parser runs, semantic counters, and diagnostics output). This made it easier to justify why a fix was correct, not only because Bison warnings were reduced, but because parser behavior became deterministic and aligned with CYLite language specification.
 \subsection{Conclusion}
 
 This report documents the work from grammar extension to a working, testable parser toolchain for CYLite. In Part 1, we constructed and analyzed the LALR(1) automaton; in Part 2, we resolved shift/reduce and reduce/reduce conflicts with explicit, verifiable grammar changes; in Part 3, we captured and rendered reverse derivations from real parser reductions; in Part 4, we converted verbose parser output into reproducible ACTION/GOTO tables and a usable matrix view; and in Part 5, we implemented error diagnostics with token-level location and expectation hints. The final system is now conflict-resolved and functionally correct, and suitable for further semantic-analysis work in the next stage.
