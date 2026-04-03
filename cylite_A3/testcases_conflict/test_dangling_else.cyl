@@ -1,0 +1,16 @@
+int main() {
+    int a = 1;
+    int b = 2;
+    int c = 3;
+
+    /* Conflict: Does the 'else' belong to the first, second, or third 'if'? */
+    // Input Sentence
+    if (a > 0) 
+        if (b > 0) 
+            print("B is positive"); 
+    else 
+        print("Which IF do I belong to?");
+   
+            
+    return 0;
+}

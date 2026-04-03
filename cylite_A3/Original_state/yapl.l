@@ -71,7 +71,6 @@ static int check_type(void);
 "return"				{ return(RETURN); }
 "short"					{ return(SHORT); }
 "sizeof"				{ return(SIZEOF); }
-"_Atomic"				{ return(ATOMIC); }
 "struct"				{ return(STRUCT); }
 "switch"				{ return(SWITCH); }
 "void"					{ return(VOID); }
