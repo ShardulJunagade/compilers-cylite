@@ -49,7 +49,7 @@ static int yytrace_fprintf(FILE *stream, const char *fmt, ...);
 static void append_step(const char *lhs, char rhs[][128], int rhs_count);
 static void print_reverse_derivation(void);
 static int write_reverse_derivation_dot(const char *dot_path);
-static int write_reverse_derivation_png(const char *png_path);
+static int write_reverse_derivation_svg(const char *svg_path);
 static int looks_like_nonterminal(const char *sym);
 static void free_derivation_steps(void);
 %}
@@ -942,13 +942,13 @@ static int write_reverse_derivation_dot(const char *dot_path)
 	return 0;
 }
 
-static int write_reverse_derivation_png(const char *png_path)
+static int write_reverse_derivation_svg(const char *svg_path)
 {
 	int status;
 	pid_t pid;
 	char dot_path[4096];
 
-	snprintf(dot_path, sizeof(dot_path), "%s.dot", png_path);
+	snprintf(dot_path, sizeof(dot_path), "%s.dot", svg_path);
 	if (write_reverse_derivation_dot(dot_path) != 0)
 	{
 		return -1;
@@ -962,7 +962,7 @@ static int write_reverse_derivation_png(const char *png_path)
 
 	if (pid == 0)
 	{
-		execlp("dot", "dot", "-Tpng", dot_path, "-o", png_path, (char *)NULL);
+		execlp("dot", "dot", "-Tsvg", dot_path, "-o", svg_path, (char *)NULL);
 		_exit(127);
 	}
 
@@ -1031,29 +1031,29 @@ int main(int argc, char **argv)
     extern FILE *yyin;
 	int i;
 	const char *input_file = NULL;
-	const char *png_file = NULL;
+	const char *svg_file = NULL;
 
 	if (argc == 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0))
 	{
-		printf("Usage: ./yapl <input_file> [--png out.png]\n");
+		printf("Usage: ./yapl <input_file> [--svg out.svg]\n");
 		printf("\n");
 		printf("Options:\n");
 		printf("  -h, --help       Show this help message and exit\n");
-		printf("  --png <path>     Write reverse derivation graph as PNG\n");
+		printf("  --svg <path>     Write reverse derivation graph as SVG\n");
 		return 0;
 	}
 
 	for (i = 1; i < argc; i++)
 	{
-		if (strcmp(argv[i], "--png") == 0)
+		if (strcmp(argv[i], "--svg") == 0)
 		{
 			if (i + 1 >= argc)
 			{
-				sprintf(buff, "***process terminated*** [input error]: missing path after --png");
+				sprintf(buff, "***process terminated*** [input error]: missing path after --svg");
 				mode = 1;
 				yyerror(buff);
 			}
-			png_file = argv[++i];
+			svg_file = argv[++i];
 		}
 		else if (input_file == NULL)
 		{
@@ -1069,7 +1069,7 @@ int main(int argc, char **argv)
 
 	if(input_file == NULL)
 	{
-		sprintf(buff,"***process terminated*** [input error]: usage ./yapl <input_file> [--png out.png]");
+		sprintf(buff,"***process terminated*** [input error]: usage ./yapl <input_file> [--svg out.svg]");
 		mode=1;
 		yyerror(buff);
 		exit(1);
@@ -1103,15 +1103,15 @@ int main(int argc, char **argv)
 	printf("if-else max-depth = %d\n",((max<0)?0:max));
 	print_reverse_derivation();
 
-	if (png_file != NULL)
+	if (svg_file != NULL)
 	{
-		if (write_reverse_derivation_png(png_file) == 0)
+		if (write_reverse_derivation_svg(svg_file) == 0)
 		{
-			printf("Reverse derivation PNG written to %s\n", png_file);
+			printf("Reverse derivation SVG written to %s\n", svg_file);
 		}
 		else
 		{
-			printf("Failed to write PNG file: %s\n", png_file);
+			printf("Failed to write SVG file: %s\n", svg_file);
 		}
 	}
 

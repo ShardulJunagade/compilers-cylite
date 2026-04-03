@@ -107,6 +107,28 @@ def parse_tables(lines: List[str], terminals: Set[str], nonterminals: Set[str]):
     return states
 
 
+def expand_default_actions(states: Dict[int, Dict[str, Dict[str, str]]], action_symbols: List[str]) -> None:
+    """Expand $default entries into concrete ACTION cells for readability.
+
+    For states with "$default = rK", fill every missing terminal column with rK.
+    For "$default = acc", only fill $end.
+    """
+    for state in states.values():
+        row_action = state["action"]
+        default_value = row_action.get("$default")
+        if default_value is None:
+            continue
+
+        if default_value == "acc":
+            if "$end" in action_symbols and "$end" not in row_action:
+                row_action["$end"] = "acc"
+            continue
+
+        for symbol in action_symbols:
+            if symbol not in row_action:
+                row_action[symbol] = default_value
+
+
 def write_matrix_csv(path: str, states: Dict[int, Dict[str, Dict[str, str]]], key: str, columns: List[str]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -279,6 +301,8 @@ def main() -> int:
 
     states = parse_tables(lines, terminals, nonterminals)
 
+    action_cols = sorted(terminals)
+    expand_default_actions(states, action_cols)
     action_cols = sorted({symbol for st in states.values() for symbol in st["action"].keys()})
     goto_cols = sorted({symbol for st in states.values() for symbol in st["goto"].keys()})
 

@@ -4,7 +4,7 @@ This runbook is for the workspace folder `cylite_A3` and covers:
 - Building and validating parser changes
 - Running Part 1 and Part 2 checks
 - Running Part 3 (reverse derivation tree) in terminal
-- Generating Graphviz visualization for Part 3
+- Generating Graphviz visualization for Part 3 (SVG)
 - Running Part 4 (LALR(1) parsing table output in matrix format)
 - Running Part 5 (error diagnostics)
 
@@ -12,7 +12,7 @@ This runbook is for the workspace folder `cylite_A3` and covers:
 
 - Linux environment
 - `bison`, `flex` (or `lex`), `gcc`
-- `graphviz` (for DOT/PNG visualization)
+- `graphviz` (for DOT/SVG visualization)
 
 Quick checks:
 
@@ -90,24 +90,29 @@ Output includes:
 - `Reverse derivation (top-down)` section
 - numbered reverse derivation steps
 
-### 4.2 PNG graph output (optional)
+### 4.2 SVG graph output (optional)
 
 ```bash
-./yapl part3/tests/rdt_extensions.cyl --png part3/reverse_derivation.png
+./yapl part3/tests/rdt_extensions.cyl --svg part3/reverse_derivation.svg
 ```
 
 This writes:
-- PNG file at the path given to `--png`
-- an intermediate DOT for PNG generation: `<png_path>.dot`
+- SVG file at the path given to `--svg`
+- an intermediate DOT for SVG generation: `<svg_path>.dot`
 
 ## 5. Suggested submission evidence for Part 3
 
 For report/demo:
 - Terminal screenshot of successful parse + reverse derivation print
-- Intermediate DOT file from PNG generation (`<png_path>.dot`)
-- PNG visualization (`part3/reverse_derivation.png`)
+- Intermediate DOT file from SVG generation (`<svg_path>.dot`)
+- SVG visualization (`part3/reverse_derivation.svg`)
 - Short explanation of CLI flags:
-  - `--png <path>`
+  - `--svg <path>`
+
+Part 3 outputs are also saved to text files:
+- `part3/tests/output_rdt_basic.txt`
+- `part3/tests/output_rdt_extensions.txt`
+- `part3/tests/output_rdt_print_strings.txt`
 
 ## 6. Part 4: Parsing Table Output (Matrix Format)
 
@@ -195,6 +200,15 @@ Notes:
 - `part5/tests/diag_missing_semicolon.cyl`
 - `part5/tests/diag_unexpected_else.cyl`
 
+Part 5 test outputs are saved per test in:
+- `part5/tests/output_diag_missing_semicolon.txt`
+- `part5/tests/output_diag_unexpected_else.txt`
+- `part5/tests/output_diag_missing_semicolon_after_print.txt`
+- `part5/tests/output_diag_missing_closing_brace.txt`
+- `part5/tests/output_diag_bad_for_range_syntax.txt`
+- `part5/tests/output_diag_bad_try_except_syntax.txt`
+- `part5/tests/output_diag_invalid_character.txt`
+
 ## 9. Added Part-3 test inputs
 
 New parser-focused CYLite tests were added under `part3/tests`:
@@ -207,9 +221,9 @@ Use these files as the default validation set for Assignment-3 Parts 1-3.
 Suggested validation commands:
 
 ```bash
-./yapl part3/tests/rdt_basic.cyl --png part3/tests/rdt_basic.png
-./yapl part3/tests/rdt_extensions.cyl --png part3/tests/rdt_extensions.png
-./yapl part3/tests/rdt_print_strings.cyl --png part3/tests/rdt_print_strings.png
+./yapl part3/tests/rdt_basic.cyl --svg part3/tests/rdt_basic.svg
+./yapl part3/tests/rdt_extensions.cyl --svg part3/tests/rdt_extensions.svg
+./yapl part3/tests/rdt_print_strings.cyl --svg part3/tests/rdt_print_strings.svg
 ```
 
 ## 10. Assignment-wide runner

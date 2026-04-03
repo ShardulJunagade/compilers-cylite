@@ -1,7 +1,7 @@
 # Parsing Table Summary
 
 - Number of states: 519
-- ACTION columns: 107
+- ACTION columns: 109
 - GOTO columns: 80
 
 ## ACTION Columns
@@ -78,6 +78,7 @@
 - LEFT_OP
 - LE_OP
 - LONG
+- LOWER_THAN_ELSE
 - MOD_ASSIGN
 - MUL_ASSIGN
 - NE_OP
@@ -113,6 +114,7 @@
 - VOLATILE
 - WHILE
 - XOR_ASSIGN
+- error
 
 ## GOTO Columns
 

@@ -1,4 +1,5 @@
 \documentclass[a4paper,12pt]{article}
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{geometry}
 \geometry{a4paper, margin=1in}
@@ -8,6 +9,19 @@
 \usepackage{hyperref}
 \usepackage{setspace}
 \usepackage{graphicx}
+\usepackage{enumitem}
+
+\setlist{itemsep=0pt}
+\setlength{\parindent}{0pt}
+\lstset{
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false
+}
 
 \begin{document}
 
@@ -73,12 +87,12 @@ We introduced the following terminal tokens into the parser to represent the cor
 
 
 \subsection{The \texttt{elif} Conditional Construct}
-In standard C, chaining conditionals requires either deeply nested \texttt{else \{ if (...) \}} blocks or the `\texttt{else if}' syntax, which is grammatically just an \texttt{else} block containing a single \texttt{if} statement. In complex logical branching, this can disrupt readability and complicate AST generation due to classic dangling-else ambiguities. Python’s \texttt{elif} provides a unified, first-class construct for multi-way branching without artificial nesting.
+In standard C, chaining conditionals often leads to deeply nested else-then-if forms, while the \texttt{else if} pattern is still treated as an \texttt{else} branch containing another \texttt{if} statement. In complex logical branching, this can disrupt readability and complicate AST generation due to classic dangling-else ambiguities. Python’s \texttt{elif} provides a unified, first-class construct for multi-way branching without artificial nesting.
 
 
 \textbf{Grammar Change:} We defined a new nonterminal \texttt{elif\_list} to explicitly handle zero or more \texttt{elif} branches recursively. We then expanded \texttt{selection\_statement} to support an \texttt{if} block followed optionally by an \texttt{elif\_list} and a final optional \texttt{else}.
 
-\begin{verbatim}
+\begin{lstlisting}
 elif_list
     : ELIF '(' expression ')' statement
     | elif_list ELIF '(' expression ')' statement
@@ -90,14 +104,14 @@ selection_statement
     | IF '(' expression ')' statement elif_list ELSE statement
     | IF '(' expression ')' statement elif_list
     ...
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Native Error Handling: \texttt{try-except}}
 Error handling in C typically falls back to checking integer return codes after every function call, or using precarious \texttt{setjmp/longjmp} chains for global exits. Modern languages isolate fragile code within explicit boundaries, redirecting failures to localized catch blocks. By implementing \texttt{try-except} directly in the CYLite grammar, we establish dedicated scope blocks for execution and recovery, allowing the backend to map these to structured, object-level exception-handling routines.
 
 \textbf{Grammar Change:} We introduced a \texttt{try\_except\_statement} combining the \texttt{TRY} keyword, a localized block (\texttt{compound\_statement}), the \texttt{EXCEPT} keyword, and its associative block. This nonterminal was then injected into the overarching \texttt{statement} rule.
 
-\begin{verbatim}
+\begin{lstlisting}
 try_except_statement
     : TRY compound_statement EXCEPT compound_statement
     ;
@@ -105,7 +119,7 @@ try_except_statement
 statement
     ...
     | try_except_statement
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Ergonomic Iteration: \texttt{foreach} and \texttt{in range}}
 
@@ -113,24 +127,24 @@ Classic C \texttt{for} loops require boilerplate initialization, condition check
 
 \textbf{Grammar Change:} The \texttt{iteration\_statement} nonterminal was expanded to natively parse these specialized loops, tying identifiers directly to iterable sequences and mathematical ranges.
 
-\begin{verbatim}
+\begin{lstlisting}
 iteration_statement
     ...
     | FOR '(' IDENTIFIER IN RANGE '(' expression ',' expression ')' ')' statement
     | FOREACH '(' IDENTIFIER IN expression ')' compound_statement
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{The explicit \texttt{pass} Operation}
 
-In standard C, an intentionally empty block or stubbed function is written as an empty curly block \texttt{\{\}} or a lone semicolon \texttt{;}. This is visually ambiguous—compilers and semantic linters regularly flag it as a probable mistake. Promoting the explicit \texttt{pass} keyword provides an unambiguous syntactic placeholder, asserting that the empty block is intentional.
+In standard C, an intentionally empty block or stubbed function is often written as a pair of empty braces or a lone semicolon \texttt{;}. This is visually ambiguous, and compilers or semantic linters may flag it as a probable mistake. Promoting the explicit \texttt{pass} keyword provides an unambiguous syntactic placeholder, asserting that the empty block is intentional.
 
 \textbf{Grammar Change:} \texttt{PASS ';'} was added directly as a terminal production alternative within the \texttt{statement} rule.
 
-\begin{verbatim}
+\begin{lstlisting}
 statement
     ...
     | PASS ';'
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{First-Class \texttt{print} Built-in}
 
@@ -138,12 +152,12 @@ Rather than relying exclusively on importing \texttt{stdio.h} to use the variadi
 
 \textbf{Grammar Change:} The \texttt{print} construct was appended defensively to \texttt{postfix\_expression}, supporting both empty calls and list arguments.
 
-\begin{verbatim}
+\begin{lstlisting}
 postfix_expression
     ...
     | PRINT '(' ')'
     | PRINT '(' argument_expression_list ')'
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Results}
 The integration of these advanced features required careful consideration of LALR(1) parsing constraints to avoid shift/reduce and reduce/reduce conflicts within the Bison generator framework. By directly extending the \texttt{yapl.y} grammar definitions, CYLite successfully bridges the architectural gap between systems programming and scripting conveniences. Developers can now write highly readable, python-inspired code while leaning on the reliable, rigorous syntax-checking rules inherent to a C-like toolchain.
@@ -155,9 +169,9 @@ To construct the LALR(1) item sets and build the parser automaton (fulfilling Pa
 
 \subsection{Bison Invocation and Outputs}
 The parser generator was invoked using the following command:
-\begin{verbatim}
+\begin{lstlisting}
 $ bison -v -d yapl.y
-\end{verbatim}
+\end{lstlisting}
 
 This command utilizes two critical flags:
 \begin{itemize}
@@ -505,7 +519,7 @@ By explicitly defining how the parser should handle the \texttt{'('} following \
 The final stage of grammar optimization involved resolving a Reduce/Reduce conflict (State 512) centered on the dual role of the comma token. This section details the structural changes required to achieve a completely deterministic, conflict-free grammar.
 
 \subsection{1. Conflicts Present in the Original Grammar}
-The primary conflict in the original grammar was a **Reduce/Reduce** ambiguity. This occurred because the comma token served two structurally identical purposes in different contexts:
+The primary conflict in the original grammar was a \textbf{Reduce/Reduce} ambiguity. This occurred because the comma token served two structurally identical purposes in different contexts:
 \begin{itemize}
     \item \textbf{As a Sequence Operator:} Chaining multiple assignments into a single \texttt{expression}.
     \item \textbf{As a List Separator:} Delimiting arguments in function calls, the \texttt{PRINT} built-in, and the \texttt{RANGE} clause of the \texttt{FOR} loop.
@@ -514,7 +528,7 @@ The primary conflict in the original grammar was a **Reduce/Reduce** ambiguity. 
 Specifically, both \texttt{expression} and a specialized \texttt{argument\_expression\_list} were defined as recursive, comma-separated lists of \texttt{assignment\_expression}. When the parser encountered a comma inside parentheses, it reached a ``Diamond Ambiguity'' where it could not decide which of the two rules to reduce. This forced the parser to rely on default rule ordering, which is considered unstable for production-level compilers.
 
 \subsection{2. Modification of the Grammar to Remove Conflicts}
-To resolve this, a strategy of **Rule Unification** and **Contextual Restriction** was applied, as shown in the Git diff in Figure \ref{fig:comma_diff}.
+To resolve this, a strategy of \textbf{Rule Unification} and \textbf{Contextual Restriction} was applied, as shown in the Git diff in Figure \ref{fig:comma_diff}.
 
 \textbf{A. Rule Unification (Postfix Expressions):}
 The redundant \texttt{argument\_expression\_list} rule was entirely removed. Function calls and the \texttt{PRINT} statement were updated to use the standard \texttt{expression} rule.
@@ -532,7 +546,7 @@ The \texttt{FOR} loop's \texttt{RANGE} clause was modified to accept only \textt
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{./Images/image11.jpeg} % ERROR: File image_3dc6fe.png is missing from the directory.
+    \includegraphics[width=\textwidth]{./Images/image11.jpeg}
     \caption{Final Git diff showing rule unification for expressions and contextual constraints in the FOR loop.}
     \label{fig:comma_diff}
 \end{figure}
@@ -548,5 +562,360 @@ The changes resolve the Reduce/Reduce conflict by eliminating the "multiple choi
 
 \subsubsection*{Note on Semantic Correctness in Elif Chains}
 As seen in the updated \texttt{elif\_list} production in Figure \ref{fig:comma_diff}, the \texttt{ladder\_len++} action was added to every branch of the \texttt{elif} structure. This ensures that the ``If-Else Ladder'' depth counter accurately reflects long chains of \texttt{if-elif-elif-else}, providing precise data for the final report metrics while maintaining a conflict-free state.
+
+\newpage
+\section{Part 3: Reverse Derivation Tree Construction and Rendering}
+
+Part 3 required two concrete outcomes after a successful parse:
+\begin{enumerate}
+    \item Preserve the derivation information generated during bottom-up parsing.
+    \item Print the derivation in reverse order so that the output reads as a top-down expansion.
+\end{enumerate}
+
+The implementation was intentionally built around the existing Bison debug stream instead of rewriting the parser into a custom parse-stack simulator. This design gives two benefits: it remains faithful to the actual reductions performed by the LALR(1) engine, and it keeps the derivation logic isolated from the grammar itself.
+
+\vspace{0.5cm}
+
+The following parser-focused inputs were used to validate Part 3 behavior across baseline and extension constructs:
+\begin{itemize}
+    \item \texttt{part3/tests/rdt\_basic.cyl}
+    \item \texttt{part3/tests/rdt\_extensions.cyl}
+    \item \texttt{part3/tests/rdt\_print\_strings.cyl}
+\end{itemize}
+
+Command to run comprehensive Part 3 tests and generate outputs:
+\begin{lstlisting}[language=C]
+make part3
+\end{lstlisting}
+The results can be found in the \href{https://github.com/ShardulJunagade/compilers-cylite/tree/main/cylite_A3/part3}{\texttt{part3/}} directory, including terminal outputs and SVG visualizations.
+
+\subsection{Implementation Design}
+
+The derivation subsystem in \texttt{yapl.y} is centered on two structures:
+\begin{itemize}
+    \item \texttt{ReductionStep}: stores one fully collected reduction (LHS and RHS symbols).
+    \item \texttt{PendingReduction}: temporary buffer while reading multi-line debug information.
+\end{itemize}
+
+\begin{lstlisting}[language=C, caption={Core data structures used for storing reductions (from yapl.y)}]
+typedef struct {
+    char lhs[128];
+    int rhs_count;
+    char rhs[64][128];
+} ReductionStep;
+
+typedef struct {
+    int active;
+    char lhs[128];
+    int rhs_count;
+    char rhs[64][128];
+} PendingReduction;
+\end{lstlisting}
+
+During parsing, custom trace handling collects each completed reduction and appends it into a dynamic array (\texttt{g\_steps}). After parse success, the print routine traverses \texttt{g\_steps} from the tail to the head.
+
+\begin{lstlisting}[language=C, caption={Reverse traversal pattern used to print top-down derivation}]
+for (i = g_step_count - 1, j = 1; i >= 0; i--, j++)
+{
+    /* print: j. LHS -> RHS */
+}
+\end{lstlisting}
+
+Conceptually, this is equivalent to reversing the reduction log. Since bottom-up parsers produce reductions from leaves toward the start symbol, the reverse sequence naturally reconstructs a derivation from start symbol toward terminals/nonterminals.
+
+\subsection{Terminal Output Mode}
+
+Representative command:
+\begin{lstlisting}
+./yapl part3/tests/rdt_extensions.cyl
+\end{lstlisting}
+
+% Representative output excerpt:
+% \begin{lstlisting}
+% ***parsing successful***
+% #global_declarations = 1
+% #function_definitions = 1
+% #integer_constants = 11
+% #pointers_declarations = 0
+% #ifs_without_else = 0
+% if-else max-depth = 2
+
+% Reverse derivation (top-down)
+% ================================
+% 1. translation_unit -> external_declaration
+% 2. external_declaration -> function_definition
+% 3. function_definition -> declaration_specifiers declarator compound_statement
+% ...
+% \end{lstlisting}
+
+\begin{figure}[h!]
+    \centering
+    % Add screenshot: terminal run of a valid Part 3 test showing parse summary and reverse derivation list.
+    % \fbox{\parbox{0.9\textwidth}{\centering
+    % Placeholder: Insert screenshot of terminal output for reverse derivation (Part 3).
+    % }}
+    \includegraphics[width=\textwidth]{./Images/rdt_extensions_terminal.png}
+    \caption{Part 3 terminal evidence: successful parse and reverse derivation output.}
+    \label{fig:part3_terminal}
+\end{figure}
+
+\subsection{Visual Rendering using Graphviz (DOT and SVG)}
+
+To improve interpretability for long derivations, the parser also supports SVG generation through Graphviz:
+\begin{lstlisting}
+./yapl part3/tests/rdt_extensions.cyl --svg part3/tests/rdt_extensions.svg
+\end{lstlisting}
+
+This produces:
+\begin{itemize}
+    \item \texttt{part3/tests/rdt\_extensions.svg}
+    \item \texttt{part3/tests/rdt\_extensions.svg.dot} (intermediate DOT graph)
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    % Add screenshot/image export of generated reverse-derivation SVG.
+    % \fbox{\parbox{0.88\textwidth}{\centering
+    % Placeholder: Insert generated reverse-derivation SVG image (Part 3 graph output).
+    % }}
+    \includegraphics[width=\textwidth]{./Images/rdt_extensions.pdf}
+    \caption{Graphviz visualization of reverse derivation structure.}
+    \label{fig:part3_svg}
+\end{figure}
+
+
+\newpage
+\section{Part 4: Parsing Table Output in Matrix Format}
+
+We implemented a automated generator in Python (\href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/generate_parsing_table.py}{\texttt{part4/generate\_parsing\_table.py}}) for the extraction of the LALR(1) table from the Bison verbose output file (\texttt{yapl.output}).
+Command to run the generator:
+\begin{lstlisting}
+make part4
+\end{lstlisting}
+
+\subsection{Pipeline and Artifacts}
+
+The implemented pipeline is:
+\begin{enumerate}
+    \item Generate verbose parser report:\newline
+    \texttt{bison -v -d yapl.y}
+    \item Parse \texttt{yapl.output} programmatically using:
+    \begin{lstlisting}
+python3 part4/generate_parsing_table.py yapl.output part4
+    \end{lstlisting}    
+\end{enumerate}
+
+The script generates four deliverables in \texttt{part4/}:
+\begin{itemize}
+    \item Action Table CSV: \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/action_table.csv}{\texttt{action\_table.csv}}
+    \item GOTO Table CSV: \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/goto_table.csv}{\texttt{goto\_table.csv}}
+    \item Parsing Table Summary: \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/parsing_table_summary.md}{\texttt{parsing\_table\_summary.md}}
+    \item Parsing Table HTML : \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/parsing_table_matrix.html}{\texttt{parsing\_table\_matrix.html}} (as per lecture sldies)
+\end{itemize}
+
+% Representative run output:
+% \begin{lstlisting}
+% Generated ACTION table: part4/action_table.csv
+% Generated GOTO table: part4/goto_table.csv
+% Generated summary: part4/parsing_table_summary.md
+% Generated HTML matrix: part4/parsing_table_matrix.html
+% \end{lstlisting}
+
+From the generated summary report:
+\begin{itemize}
+    \item Number of states: \textbf{519}
+    \item ACTION columns: \textbf{109}
+    \item GOTO columns: \textbf{80}
+\end{itemize}
+
+\subsection{Matrix Design Notes}
+
+The HTML renderer intentionally combines ACTION and GOTO into a single wide matrix:
+\begin{center}
+\texttt{State | ACTION terminals ... | GOTO non-terminals ...}
+\end{center}
+
+To make a large LALR table usable, the following UX-level features were included:
+\begin{itemize}
+    \item grouped section headers for ACTION and GOTO,
+    \item sticky top headers,
+    \item sticky state column,
+    \item scroll container for high-column matrices.
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    % Add screenshot of parsing_table_matrix.html opened in a browser.
+    \fbox{\parbox{0.92\textwidth}{\centering
+    Placeholder: Insert browser screenshot of parsing\_table\_matrix.html (single ACTION+GOTO matrix).
+    }}
+    \caption{Single-matrix LALR(1) table view generated for Part 4.}
+    \label{fig:part4_matrix_html}
+\end{figure}
+
+\subsection{Representative Implementation Snippets}
+
+\begin{lstlisting}[language=Python, caption={State and ACTION/GOTO extraction strategy}]
+state_re = re.compile(r"^State\s+(\d+)\s*$")
+shift_re = re.compile(r"^\s+(\S+)\s+\[?shift, and go to state\s+(\d+)\]?")
+reduce_re = re.compile(r"^\s+(\S+)\s+\[?reduce using rule\s+(\d+)\s+\(([^)]+)\)\]?")
+
+if symbol in nonterminals:
+    add_cell(row_goto, symbol, target)
+else:
+    add_cell(row_action, symbol, f"s{target}")
+\end{lstlisting}
+
+The script also merges repeated entries in a cell as \texttt{value1 / value2}, preserving conflict visibility where applicable.
+
+\newpage
+\section{Part 5: Error Diagnostics}
+
+Part 5 focuses on actionable syntax diagnostics. The implemented behavior reports:
+\begin{itemize}
+    \item exact line and column,
+    \item the unexpected token actually seen,
+    \item expected-token hints.
+\end{itemize}
+
+\subsection{Diagnostic Architecture}
+
+The solution spans both lexer and parser:
+\begin{enumerate}
+    \item Lexer tracks token start coordinates (\texttt{yytok\_line}, \texttt{yytok\_col}) through \texttt{YY\_USER\_ACTION}.
+    \item Parser uses a custom \texttt{yyerror()} path that prints structured syntax diagnostics.
+\end{enumerate}
+
+\begin{lstlisting}[language=C, caption={Token-position capture in yapl.l}]
+int yyline = 1;
+int yycol = 1;
+int yytok_line = 1;
+int yytok_col = 1;
+
+#define YY_USER_ACTION yytok_line = yyline; yytok_col = yycol; update_position(yytext);
+\end{lstlisting}
+
+\begin{lstlisting}[language=C, caption={Parser-side diagnostic formatter in yapl.y}]
+static void print_syntax_diagnostics(const char *s)
+{
+    const char *tok = "<end-of-input>";
+    const char *expecting = NULL;
+
+    if (yytext != NULL && yytext[0] != '\0') tok = yytext;
+    printf("***parsing terminated*** [syntax error]\n");
+    printf("line %d, column %d: unexpected token \"%s\"\n", yytok_line, yytok_col, tok);
+
+    expecting = strstr(s, "expecting ");
+    if (expecting != NULL) printf("expected: %s\n", expecting + 10);
+}
+\end{lstlisting}
+
+\subsection{Diagnostic Test Suite and Coverage}
+
+Invalid test programs were added under \texttt{part5/tests} and executed through \texttt{make part5}. Current suite:
+\begin{itemize}
+    \item \texttt{diag\_missing\_semicolon.cyl}
+    \item \texttt{diag\_unexpected\_else.cyl}
+    \item \texttt{diag\_missing\_semicolon\_after\_print.cyl}
+    \item \texttt{diag\_missing\_closing\_brace.cyl}
+    \item \texttt{diag\_bad\_for\_range\_syntax.cyl}
+    \item \texttt{diag\_bad\_try\_except\_syntax.cyl}
+    \item \texttt{diag\_invalid\_character.cyl}
+\end{itemize}
+
+\subsection{Representative Output Samples}
+
+\begin{lstlisting}
+./yapl part5/tests/diag_missing_semicolon.cyl
+***parsing terminated*** [syntax error]
+line 4, column 5: unexpected token "x"
+expected: ',' or ';'
+\end{lstlisting}
+
+\begin{lstlisting}
+./yapl part5/tests/diag_bad_try_except_syntax.cyl
+***parsing terminated*** [syntax error]
+line 5, column 9: unexpected token "pass"
+expected: '{'
+\end{lstlisting}
+
+\begin{lstlisting}
+./yapl part5/tests/diag_invalid_character.cyl
+***parsing terminated*** [syntax error]
+line 4, column 5: unexpected token "@"
+\end{lstlisting}
+
+\begin{figure}[h!]
+    \centering
+    % Add screenshot: make part5 output showing multiple failing tests with line/column diagnostics.
+    \fbox{\parbox{0.9\textwidth}{\centering
+    Placeholder: Insert terminal screenshot of make part5 diagnostics output.
+    }}
+    \caption{Part 5 diagnostics run on intentionally invalid CYLite inputs.}
+    \label{fig:part5_diag_terminal}
+\end{figure}
+
+\newpage
+\section{Execution Instructions (Parts 3, 4, 5)}
+
+This section provides a direct, submission-ready command sequence.
+
+\subsection{Prerequisites}
+\begin{itemize}
+    \item Linux/WSL shell environment
+    \item \texttt{bison}, \texttt{flex} (or \texttt{lex}), \texttt{gcc}
+    \item \texttt{graphviz} (for SVG visualization in Part 3)
+\end{itemize}
+
+Quick checks:
+\begin{lstlisting}
+bison --version
+flex --version
+gcc --version
+dot -V
+\end{lstlisting}
+
+\subsection{Build}
+\begin{lstlisting}
+cd cylite_A3
+make clean
+make
+\end{lstlisting}
+
+\subsection{Run Part 3}
+\begin{lstlisting}
+make part3
+\end{lstlisting}
+This executes all Part 3 parser tests, writes SVG outputs in \texttt{part3/tests/}, and saves terminal outputs in \texttt{part3/tests/output\_*.txt}.
+
+\subsection{Run Part 4}
+\begin{lstlisting}
+make part4
+\end{lstlisting}
+This regenerates \texttt{yapl.output} and all matrix artifacts in \texttt{part4/}.
+
+\subsection{Run Part 5}
+\begin{lstlisting}
+make part5
+\end{lstlisting}
+These cases are intentionally invalid. Non-zero parse exits are expected and are ignored by Make for demonstration.
+Each test also writes its parser output into \texttt{part5/tests/output\_diag\_*.txt}.
+
+\subsection{Optional Full Cleanup}
+\begin{lstlisting}
+make distclean
+\end{lstlisting}
+This removes parser-generated files and Part 3/Part 4 generated artifacts.
+
+\section{Conclusion}
+
+Parts 3, 4, and 5 extend the parser from a correctness-only front-end into a usable compiler component with traceability, observability, and practical feedback loops:
+\begin{itemize}
+    \item Part 3 provides derivation introspection in both text and graph forms.
+    \item Part 4 makes the LALR(1) table reproducible, auditable, and presentation-ready.
+    \item Part 5 improves developer experience by turning generic syntax failure into contextual diagnostics.
+\end{itemize}
+
+Together with the completed conflict work from Parts 1 and 2, this delivers a robust Assignment-3 implementation aligned with both formal parser requirements and real debugging workflows.
 
 \end{document}
