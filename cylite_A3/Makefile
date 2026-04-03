@@ -40,7 +40,7 @@ clean:
 
 distclean: clean
 	@rm -f yapl.output yapl.tab.c yapl.tab.h
-	@rm -f part4/action_table.csv part4/goto_table.csv part4/parsing_table_summary.md part4/parsing_table_matrix.html
 	@rm -f part3/tests/*.dot part3/tests/*.png part3/tests/*.png.dot
 	@rm -f part3/tests/*.svg part3/tests/output_*.txt
+	@rm -f part4/action_table.csv part4/goto_table.csv part4/parsing_table_summary.md part4/parsing_table_matrix.html
 	@rm -f part5/tests/output_*.txt

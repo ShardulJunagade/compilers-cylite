@@ -155,35 +155,34 @@ def write_summary(path: str, num_states: int, action_cols: List[str], goto_cols:
 
 
 def write_single_matrix_html(path: str, states: Dict[int, Dict[str, Dict[str, str]]], action_cols: List[str], goto_cols: List[str]) -> None:
-        def td(text: str, cls: str = "") -> str:
-                class_attr = f' class="{cls}"' if cls else ""
-                return f"<td{class_attr}>{html.escape(text)}</td>"
+    def td(text: str, cls: str = "") -> str:
+        class_attr = f' class="{cls}"' if cls else ""
+        return f"<td{class_attr}>{html.escape(text)}</td>"
 
-        total_cols = 1 + len(action_cols) + len(goto_cols)
-        rows: List[str] = []
+    rows: List[str] = []
 
-        rows.append(
-                "<tr>"
-                "<th class=\"state-head\"></th>"
-                f"<th class=\"section-head action\" colspan=\"{len(action_cols)}\">ACTION</th>"
-                f"<th class=\"section-head goto\" colspan=\"{len(goto_cols)}\">GOTO</th>"
-                "</tr>"
-        )
+    rows.append(
+        "<tr>"
+        "<th class=\"state-head-top\"></th>"
+        f"<th class=\"section-head action\" colspan=\"{len(action_cols)}\">ACTION</th>"
+        f"<th class=\"section-head goto\" colspan=\"{len(goto_cols)}\">GOTO</th>"
+        "</tr>"
+    )
 
-        header_cells = ["<th class=\"state-head\">State</th>"]
-        header_cells.extend([f"<th class=\"col-head action\">{html.escape(col)}</th>" for col in action_cols])
-        header_cells.extend([f"<th class=\"col-head goto\">{html.escape(col)}</th>" for col in goto_cols])
-        rows.append("<tr>" + "".join(header_cells) + "</tr>")
+    header_cells = ["<th class=\"state-head-sub\">State</th>"]
+    header_cells.extend([f"<th class=\"col-head action\">{html.escape(col)}</th>" for col in action_cols])
+    header_cells.extend([f"<th class=\"col-head goto\">{html.escape(col)}</th>" for col in goto_cols])
+    rows.append("<tr>" + "".join(header_cells) + "</tr>")
 
-        for state in sorted(states.keys()):
-                action_row = states[state]["action"]
-                goto_row = states[state]["goto"]
-                cells = [f"<th class=\"state-cell\">{state}</th>"]
-                cells.extend([td(action_row.get(col, ""), "action") for col in action_cols])
-                cells.extend([td(goto_row.get(col, ""), "goto") for col in goto_cols])
-                rows.append("<tr>" + "".join(cells) + "</tr>")
+    for state in sorted(states.keys()):
+        action_row = states[state]["action"]
+        goto_row = states[state]["goto"]
+        cells = [f"<th class=\"state-cell\">{state}</th>"]
+        cells.extend([td(action_row.get(col, ""), "action") for col in action_cols])
+        cells.extend([td(goto_row.get(col, ""), "goto") for col in goto_cols])
+        rows.append("<tr>" + "".join(cells) + "</tr>")
 
-        html_out = f"""<!DOCTYPE html>
+    html_out = f"""<!DOCTYPE html>
 <html lang=\"en\">
 <head>
     <meta charset=\"utf-8\" />
@@ -200,6 +199,8 @@ def write_single_matrix_html(path: str, states: Dict[int, Dict[str, Dict[str, st
             --goto: #7c2d12;
             --accent-soft: #eef7f6;
             --goto-soft: #fff5ef;
+            --header-row-1-h: 36px;
+            --state-col-w: 72px;
         }}
         * {{ box-sizing: border-box; }}
         body {{
@@ -225,14 +226,31 @@ def write_single_matrix_html(path: str, states: Dict[int, Dict[str, Dict[str, st
         .table-wrap {{ overflow: auto; max-height: calc(100vh - 170px); }}
         table {{ border-collapse: collapse; width: max-content; min-width: 100%; font-size: 12px; }}
         th, td {{ border: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; text-align: center; }}
-        .section-head {{ position: sticky; top: 0; z-index: 3; font-size: 13px; letter-spacing: 0.3px; }}
+        .section-head {{ position: sticky; top: 0; z-index: 6; font-size: 13px; letter-spacing: 0.3px; }}
         .section-head.action {{ background: var(--accent-soft); color: var(--action); }}
         .section-head.goto {{ background: var(--goto-soft); color: var(--goto); }}
-        .state-head {{ position: sticky; left: 0; top: 0; z-index: 4; background: #f3f4f6; min-width: 72px; }}
-        .col-head {{ position: sticky; top: 37px; z-index: 2; font-weight: 600; }}
+        .state-head-top {{
+            position: sticky;
+            left: 0;
+            top: 0;
+            z-index: 7;
+            min-width: var(--state-col-w);
+            background: #f3f4f6;
+        }}
+        .state-head-sub {{
+            position: sticky;
+            left: 0;
+            top: var(--header-row-1-h);
+            z-index: 7;
+            min-width: var(--state-col-w);
+            background: #f3f4f6;
+            font-weight: 700;
+        }}
+        .col-head {{ position: sticky; top: var(--header-row-1-h); z-index: 5; font-weight: 600; }}
         .col-head.action {{ background: #f8fcfc; color: #115e59; }}
         .col-head.goto {{ background: #fff9f5; color: #9a3412; }}
-        .state-cell {{ position: sticky; left: 0; z-index: 1; background: #f8fafc; }}
+        .state-cell {{ position: sticky; left: 0; z-index: 4; background: #f8fafc; min-width: var(--state-col-w); }}
+        .section-head, .col-head, .state-head-top, .state-head-sub {{ box-shadow: 0 1px 0 var(--line); }}
         td.action {{ background: #fcfffe; }}
         td.goto {{ background: #fffdfb; }}
         tr:nth-child(odd) td.action {{ background: #f9fdfd; }}
@@ -251,7 +269,7 @@ def write_single_matrix_html(path: str, states: Dict[int, Dict[str, Dict[str, st
             <div class=\"table-wrap\">
                 <table>
                     <colgroup>
-                        <col style=\"width:72px\" />
+                        <col style=\"width:var(--state-col-w)\" />
                         <col span=\"{len(action_cols)}\" />
                         <col span=\"{len(goto_cols)}\" />
                     </colgroup>
@@ -275,8 +293,8 @@ def write_single_matrix_html(path: str, states: Dict[int, Dict[str, Dict[str, st
 </html>
 """
 
-        with open(path, "w", encoding="utf-8") as f:
-                f.write(html_out)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html_out)
 
 
 def main() -> int:

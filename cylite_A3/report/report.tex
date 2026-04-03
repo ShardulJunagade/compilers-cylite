@@ -10,6 +10,7 @@
 \usepackage{setspace}
 \usepackage{graphicx}
 \usepackage{enumitem}
+\usepackage{float}
 
 \setlist{itemsep=0pt}
 \setlength{\parindent}{0pt}
@@ -22,6 +23,7 @@
     breaklines=true,
     showstringspaces=false
 }
+\setcounter{tocdepth}{2}
 
 \begin{document}
 
@@ -49,10 +51,11 @@
     {\large \today \par}
 \end{titlepage}
 
+
 \tableofcontents
 \newpage
 
-\setstretch{1.4}
+\setstretch{1.3}
 \section{Introduction}
 
 The landscape of programming languages has long been divided between highly performant, statically typed systems languages like C, and highly expressive, dynamically typed scripting languages like Python. C provides unparalleled control over hardware and memory layout, executing with optimal efficiency. However, its syntax can be unforgiving; error handling relies heavily on cumbersome return codes, control flow can become deeply nested and difficult to read, and iterative constructs often lead to off-by-one errors. Conversely, Python offers ergonomic syntax, explicit error handling blocks, and intuitive looping mechanisms, but at the cost of execution speed and strict compile-time type safety. 
@@ -563,8 +566,367 @@ The changes resolve the Reduce/Reduce conflict by eliminating the "multiple choi
 \subsubsection*{Note on Semantic Correctness in Elif Chains}
 As seen in the updated \texttt{elif\_list} production in Figure \ref{fig:comma_diff}, the \texttt{ladder\_len++} action was added to every branch of the \texttt{elif} structure. This ensures that the ``If-Else Ladder'' depth counter accurately reflects long chains of \texttt{if-elif-elif-else}, providing precise data for the final report metrics while maintaining a conflict-free state.
 
+\section{Conflict Demonstration}
+
+\subsection{Dangling If-Else Problem}
+\label{sec:dangling_else_analysis}
+
+\subsubsection{Introduction}
+
+To see if our fixes worked, we checked how the CYLite parser handles the tricky ``Dangling Else'' problem. We ran a test on two versions of the parser: the old one (which had ``conflicts'' or warnings) and the new one (where we fixed those conflicts).
+
+\subsubsection{Test Code}
+
+We used a file named \texttt{test\_dangling\_else.cyl} that has this code:
+
+\begin{lstlisting}
+int main() {
+    int a = 1;
+    int b = 2;
+    int c = 3;
+
+    if (a > 0)
+        if (b > 0)
+            print("B is positive");
+    else
+        print("Which IF do I belong to?");
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsubsection{Results and Observations}
+
+Both the old and new parsers gave the exact same output.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{Images/dangling_conflict.png}
+    \hfill
+    \includegraphics[width=0.45\textwidth]{Images/dangling.png}
+    \caption{Dangling else conflict (left) and its resolution (right)}
+    \label{fig:dangling_outputs}
+\end{figure}
+
+
+
+\subsubsection{Why the Outputs Match}
+
+Both versions give the same output because of how Bison naturally handles conflicts. When it sees a choice between Shift and Reduce, Bison automatically chooses to Shift.
+
+\begin{enumerate}
+    \item  In the older version, Bison saw the \texttt{else} and decided to shift. This naturally attached the \texttt{else} to the closest \texttt{if}. It gave the right answer, even though the grammar rules were technically confusing (ambiguous).
+
+    \item  In the fixed version, this choice is no longer an accident. By using \texttt{\%prec LOWER\_THAN\_ELSE}, we forced the grammar to always make the exact right choice.
+\end{enumerate}
+
+\subsubsection{Conclusion}
+
+By fixing the conflict, our parser no longer ``guesses correctly'' but instead ``knows exactly what to do.'' This makes the grammar much more solid and reliable when we add new rules later.
+
+
+
+\subsection{Elif Ambiguity Problem}
+\label{sec:elif_ambiguity_analysis}
+
+\subsubsection{Introduction}
+
+A critical component of this assignment was the implementation of a nested ``if-elif-else ladder'' depth counter. This section demonstrates how resolving Shift/Reduce conflicts was a prerequisite for accurate semantic analysis.
+
+\subsubsection{Test Code}
+
+To test the robustness of the counter logic, a multi-branch conditional statement (\texttt{test\_elif\_ambiguity.cyl}) was parsed using both the original and resolved versions of the grammar.
+
+The test file contained the following structure:
+
+\begin{center}
+    \texttt{if -> elif -> elif -> else} (A 3-step transition ladder)
+\end{center}
+
+\subsubsection{Results and Observations}
+
+As seen in the comparison between Figure \ref{fig:elif_depth_fail} and Figure \ref{fig:elif_depth_success}, the results were drastically different:
+
+\begin{itemize}
+    \item \textbf{Original State (Conflicted):} Reported a \texttt{max-depth} of \textbf{0}
+    \item \textbf{Resolved State (Deterministic):} Reported a \texttt{max-depth} of \textbf{3}
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{"Images/elif_conflict.png"}
+        \caption{Original Parser: Metric Failure (Depth 0)}
+        \label{fig:elif_depth_fail}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{"Images/elif.png"}
+        \caption{Resolved Parser: Correct Metric (Depth 3)}
+        \label{fig:elif_depth_success}
+    \end{minipage}
+\end{figure}
+
+
+
+\subsubsection{Why the Metrics Improved}
+
+The transition from a depth of 0 to 3 is explained by the internal state transitions of the parser:
+
+\begin{enumerate}
+    \item \textbf{Action Skipping:} In the conflicted version, the parser navigated the \texttt{if-elif} tokens using default recovery and shift behaviors. This allowed the parser to reach the end of the file (``Parsing Successful''), but it effectively ``jumped over'' the semantic blocks. Since the reduction of the ladder was ambiguous, the code inside the braces \texttt{\{ ladder\_len++; \}} was never triggered.
+
+    \item \textbf{Guaranteed Execution:} In the resolved version, the use of \texttt{\%prec} and \texttt{\%nonassoc} removed the ambiguity. The LALR(1) state machine is now forced to enter the specific rule branch for each \texttt{elif}.
+
+    \item \textbf{Stack Aggregation:} By forcing these reductions, the \texttt{ladder\_len} is incremented at every ``rung'' of the ladder. The final value of \textbf{3} accurately represents the three distinct transitions from the initial \texttt{IF} to the subsequent branches, proving that the semantic stack is correctly preserving and restoring the depth state.
+\end{enumerate}
+
+\subsubsection{Conclusion}
+
+This comparison proves that a conflict-free grammar is essential for reliable compiler analytics. Without a deterministic grammar, mid-rule semantic actions cannot be guaranteed to execute, leading to silent failures in program analysis.
+
 \newpage
-\section{Part 3: Reverse Derivation Tree Construction and Rendering}
+
+\subsection{Comma Operator Conflict Problem}
+\label{sec:comma_operator_analysis}
+
+\subsubsection{Introduction}
+
+This section analyzes another critical ambiguity in parser design: the Reduce/Reduce conflict that arises when distinguishing between the comma operator and the comma separator. Using the test case \texttt{test\_comma.cyl}, we demonstrate how the parser resolves this ambiguity in both the original (conflicted) and resolved versions.
+
+\subsubsection{Test Code}
+
+The test file \texttt{test\_comma.cyl} contains a for loop with a range function call:
+
+\begin{lstlisting}
+int main() {
+    int i;
+    for (i in range(1, 10)) {
+        print(i);
+    }
+    return 0;
+}
+\end{lstlisting}
+
+The critical ambiguity: Is \texttt{(1, 10)} a comma operator expression or two separate arguments?
+
+\subsubsection{Results and Observations}
+
+Both the old and new parsers yielded identical semantic counts:
+
+
+
+\begin{figure}[!ht]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{"Images/comma_conflict.png"}
+        \caption{Original Parser: Conflicted Output}
+        \label{fig:comma_conflict_demo}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{"Images/comma.png"}
+        \caption{Resolved Parser: Deterministic Output}
+        \label{fig:comma_resolved}
+    \end{minipage}
+\end{figure}
+
+
+
+
+\subsubsection{Analysis of the Original State}
+
+In the original grammar, the parser encountered a Reduce/Reduce conflict in State 515 when it processed the comma inside \texttt{range(1, 10)}.
+
+\vspace{0.4cm}
+\textbf{The Problem}
+
+The parser had two mathematically valid ways to interpret the token sequence:
+
+\begin{itemize}
+    \item \textbf{Treat as an Operator:} Reduce the comma as part of a single unified sequence expression.
+    \item \textbf{Treat as a Separator:} Reduce the tokens into a list of distinct arguments.
+\end{itemize}
+
+\vspace{0.4cm}
+\textbf{Bison's Default Resolution}
+
+GNU Bison resolves Reduce/Reduce conflicts by choosing the rule that appears first in the grammar file. In this instance, the parser's default choice happened to align with the intended logic of the test file, which is why the output metrics matched.
+
+\subsubsection{The Structural Resolution}
+
+To eliminate this ambiguity, the grammar was modified to use contextual restriction rather than relying on tool defaults.
+
+
+\vspace{0.4cm}
+\textbf{The Logic}
+
+An \texttt{assignment\_expression} is a strict subset of a full expression that does not include the comma operator at the top level. Therefore:
+
+\begin{enumerate}
+    \item The parser is now forced to treat any comma in the range context as a separator, not as an operator.
+    \item The ambiguity is eliminated by grammar design, not by hoping Bison guesses correctly.
+\end{enumerate}
+
+\subsubsection{Why the Metrics Are Identical}
+
+The identical count of 3 integer constants (representing the values 1, 10, and the implicit 0 in \texttt{return 0}) proves that both versions eventually arrived at the correct leaf-node values. However:
+
+\begin{enumerate}
+    \item \textbf{Original State:} The parser was ``guessing'' based on the order of rules in the grammar file. The correct result was obtained by accident, not by mathematical certainty.
+
+    \item \textbf{Resolved State:} The parser is now deterministic. Because the comma operator is illegal inside an \texttt{assignment\_expression}, the automaton is now \textbf{100\% certain} that any comma encountered must be the separator for range arguments.
+\end{enumerate}
+
+\subsubsection{Conclusion}
+
+This comparison demonstrates that a conflict-free parser is not just a theoretical improvement---it is a practical necessity. While both versions produced the same output for this specific test case, the original parser's correctness was contingent on luck and file ordering. The resolved grammar eliminates the ambiguity entirely, making the compiler portable across different parser generators and robust against future grammar extensions.
+
+
+\subsection{Pointer Declarator Logic}
+\label{sec:pointer_declarator_analysis}
+
+\subsubsection{Introduction}
+
+To verify the resolution of the Shift/Reduce conflict in State 345, we tested the parser's ability to correctly handle pointer declarations. This section examines how the parser distinguishes between simple and complex pointer syntax, and how conflict resolution ensures deterministic parsing.
+
+\subsubsection{Test Code}
+
+The test case \texttt{test\_pointer.cyl} contains multiple pointer declarations:
+
+\begin{lstlisting}
+int *p;
+int **q;
+
+int main() {
+    return 0;
+}
+\end{lstlisting}
+
+The critical ambiguity: When the parser encounters a pointer declarator followed by an identifier or parenthesis, it must decide between concrete and abstract declarators.
+
+\subsubsection{Results and Observations}
+
+Both the old and new parsers yielded identical semantic counts for the test case:
+
+
+
+\begin{figure}[!ht]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{"Images/pointer_conflict.png"}
+        \caption{Original Parser: Conflicted Output}
+        \label{fig:pointer_conflict_demo}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{"Images/pointer.png"}
+        \caption{Resolved Parser: Deterministic Output}
+        \label{fig:pointer_resolved}
+    \end{minipage}
+\end{figure}
+
+
+
+\subsubsection{Technical Analysis}
+
+\vspace{0.4cm}
+\textbf{Path of Least Resistance}
+
+For standard declarations where a pointer is followed by an \texttt{IDENTIFIER}, the original LALR(1) table was already deterministic. The conflict only manifested when the lookahead was a parenthesis \texttt{`('}, which triggers the ambiguity between concrete and abstract declarators.
+
+\vspace{0.4cm}
+\textbf{Transition to Determinism}
+
+While the metrics are identical for this input, the original grammar relied on mid-rule actions that created non-deterministic ``dummy'' reductions. By relocating the increment action to the end of the production, the conflict was eliminated. This ensures:
+
+\begin{enumerate}
+    \item The semantic counter is part of a single, unified reduction path
+    \item Complex pointer syntax no longer risks bypassing the increment logic
+    \item The parser no longer depends on Bison's default shift-priority rule
+\end{enumerate}
+
+
+\subsubsection{Why the Metrics Are Identical}
+
+The identical count of 2 pointer declarations proves that both parsers successfully identified and counted the pointer declarators (\texttt{*p} and \texttt{**q}). However:
+
+\begin{enumerate}
+    \item \textbf{Original State:} The parser's counting was contingent on favorable lookahead conditions. Complex declarators with parentheses could expose the underlying ambiguity and cause counting failures.
+
+    \item \textbf{Resolved State:} By migrating the semantic action from a mid-rule position to the end of the production, the LALR(1) automaton is no longer forced into a premature reduction. This resolves the conflict in State 345 by enabling the parser to leverage its full lookahead buffer to distinguish between pointer-based declarators and abstract types.
+\end{enumerate}
+
+\subsubsection{Conclusion}
+
+The identical counts prove that the semantic logic for pointer counting is sound. The structural change provides \textbf{syntactic stability}, ensuring the parser remains deterministic across all valid C11 declarator variations---from simple pointers to complex declarations like \texttt{int (*fp)(int, int)} (function pointers) and \texttt{int *arr[10]} (arrays of pointers).
+
+\newpage
+
+\subsection{The 'Atomic' Ambiguity}
+\label{sec:atomic_ambiguity_analysis}
+
+\subsubsection{Introduction}
+
+To verify the impact of the grammar disambiguation, a comparative test was performed between the original conflicted parser and the refined, zero-conflict parser. The test case (\texttt{test\_atomic.cyl}) contains the two distinct legal uses of the \texttt{\_Atomic} keyword in C11:
+
+\begin{lstlisting}[language=C]
+_Atomic(int) pointer_to_atomic; // Atomic Type Specifier
+_Atomic int simple_atomic;      // Atomic Type Qualifier
+\end{lstlisting}
+
+\subsubsection{1. Identification: Failure of the Conflicted Parser}
+
+As shown in Figure \ref{fig:atomic_failure}, the original parser failed to process this file, resulting in a \texttt{[syntax error]}.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/atomic_conflict.png}
+    \caption{Conflicted parser failing on valid C11 atomic declarations.}
+    \label{fig:atomic_failure}
+\end{figure}
+
+The failure is rooted in \textbf{State 27} of the LALR(1) automaton. Because the grammar could not distinguish between the specifier and the qualifier without explicit precedence, the parser's internal state machine entered an invalid path. Specifically, when the parser encountered \texttt{\_Atomic(int)}, the Shift/Reduce conflict forced a default action that was incompatible with the subsequent tokens, leading to an immediate termination of the parsing process.
+
+\subsubsection{2. Modification: Implementing Parenthetical Precedence}
+
+The grammar was modified to provide a deterministic path for the \texttt{ATOMIC} token. The following logic was implemented:
+
+\begin{itemize}
+    \item \textbf{Token Priority:} The open parenthesis \texttt{'('} was assigned a high precedence level (\texttt{\%right '('}) in the preamble.
+    \item \textbf{Qualifier Tagging:} The standalone \texttt{ATOMIC} qualifier was tagged with \texttt{\%prec LOWER\_THAN\_ELSE}, ensuring it has a lower priority than the parenthetical shift.
+\end{itemize}
+
+\subsubsection{3. Resolution Logic and Proof of Success}
+
+By resolving the conflict in State 27, the parser was granted the ability to use its lookahead buffer to arbitrate between the two rules:
+
+\begin{enumerate}
+    \item \textbf{Specifier Matching:} When the parser sees \texttt{\_Atomic} followed by \texttt{'('}, the higher precedence of the parenthesis forces a \textbf{Shift}. This correctly directs the automaton into the \texttt{atomic\_type\_specifier} production.
+    \item \textbf{Qualifier Matching:} When \texttt{\_Atomic} is followed by \texttt{int}, no parenthesis is present to trigger the shift. The parser then safely reduces the token as a \texttt{type\_qualifier}.
+\end{enumerate}
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/atomic.png}
+    \caption{Success of the refined parser on the same test case (0 conflicts).}
+    \label{fig:atomic_success}
+\end{figure}
+
+As evidenced in Figure \ref{fig:atomic_success}, the refined parser successfully processed both declarations (\texttt{\#global\_declarations = 2}). This comparison proves that the removal of Shift/Reduce conflicts is not merely a formal requirement, but a functional necessity for the correct parsing of multi-role keywords like \texttt{\_Atomic}.
+
+\subsubsection{Conclusion}
+
+This case study demonstrates a critical difference between the original and resolved parsers: while the dangling else, elif, comma, and pointer issues allowed the parser to produce correct outputs through accident and default behavior, the atomic ambiguity represents a complete \textbf{parsing failure}. The conflicted parser could not parse valid C11 code at all. By implementing parenthetical precedence, the grammar now correctly distinguishes between type specifiers and qualifiers, enabling the parser to handle all valid atomic declarations deterministically. This validation conclusively proves that conflict resolution is not an optional formality but an essential requirement for a robust, standards-compliant parser.
+
+\newpage
+\section{Part 3: Reverse Derivation Tree Construction}
 
 Part 3 required two concrete outcomes after a successful parse:
 \begin{enumerate}
@@ -591,28 +953,49 @@ The results can be found in the \href{https://github.com/ShardulJunagade/compile
 
 \subsection{Implementation Design}
 
+The core design choice was to keep grammar behavior unchanged and add only a trace-collection layer on top of Bison's own reductions. This was implemented by enabling parser tracing with \texttt{yydebug = 1} and redirecting trace emission through:
+
+\begin{lstlisting}[language=C]
+#define YYFPRINTF yytrace_fprintf
+\end{lstlisting}
+
+The custom trace function \texttt{yytrace\_fprintf(...)} receives debug fragments, reconstructs full trace lines, and forwards them to a reduction extractor. This keeps derivation capture tightly synchronized with real parser reductions and avoids introducing any separate grammar-walker implementation.
+
 The derivation subsystem in \texttt{yapl.y} is centered on two structures:
 \begin{itemize}
     \item \texttt{ReductionStep}: stores one fully collected reduction (LHS and RHS symbols).
-    \item \texttt{PendingReduction}: temporary buffer while reading multi-line debug information.
-\end{itemize}
-
-\begin{lstlisting}[language=C, caption={Core data structures used for storing reductions (from yapl.y)}]
+    \begin{lstlisting}[language=C]
 typedef struct {
     char lhs[128];
     int rhs_count;
     char rhs[64][128];
 } ReductionStep;
-
+    \end{lstlisting}
+    \item \texttt{PendingReduction}: temporary buffer while reading multi-line debug information.
+    \begin{lstlisting}[language=C]
 typedef struct {
     int active;
     char lhs[128];
     int rhs_count;
     char rhs[64][128];
 } PendingReduction;
-\end{lstlisting}
+    \end{lstlisting}
+\end{itemize}
 
-During parsing, custom trace handling collects each completed reduction and appends it into a dynamic array (\texttt{g\_steps}). After parse success, the print routine traverses \texttt{g\_steps} from the tail to the head.
+
+
+
+
+During parsing, each finalized reduction is appended into a dynamically growing array \texttt{g\_steps}, tracked by \texttt{g\_step\_count} and \texttt{g\_step\_cap}.
+
+The reduction extractor follows a three-phase flow:
+\begin{enumerate}
+    \item Detect reduction start from lines beginning with \texttt{Reducing stack by rule ...} and reset pending state.
+    \item Collect ordered RHS symbols from lines containing \texttt{= token ...} or \texttt{= nterm ...}.
+    \item Finalize one production on lines containing \texttt{-> \$\$ = nterm ...}, then copy pending data into \texttt{g\_steps}.
+\end{enumerate}
+
+This guarantees that each stored entry corresponds to one real parser reduction, including empty-RHS (epsilon-like) cases. After parse success, the print routine traverses \texttt{g\_steps} from the tail to the head.
 
 \begin{lstlisting}[language=C, caption={Reverse traversal pattern used to print top-down derivation}]
 for (i = g_step_count - 1, j = 1; i >= 0; i--, j++)
@@ -625,7 +1008,7 @@ Conceptually, this is equivalent to reversing the reduction log. Since bottom-up
 
 \subsection{Terminal Output Mode}
 
-Representative command:
+Representative command to print the reverse derivation directly in the terminal:
 \begin{lstlisting}
 ./yapl part3/tests/rdt_extensions.cyl
 \end{lstlisting}
@@ -685,10 +1068,10 @@ This produces:
 
 
 \newpage
-\section{Part 4: Parsing Table Output in Matrix Format}
+\section{Part 4: Parsing Table Output}
 
 We implemented a automated generator in Python (\href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/generate_parsing_table.py}{\texttt{part4/generate\_parsing\_table.py}}) for the extraction of the LALR(1) table from the Bison verbose output file (\texttt{yapl.output}).
-Command to run the generator:
+Make command to generate the Part-4 deliverables:
 \begin{lstlisting}
 make part4
 \end{lstlisting}
@@ -705,7 +1088,7 @@ python3 part4/generate_parsing_table.py yapl.output part4
     \end{lstlisting}    
 \end{enumerate}
 
-The script generates four deliverables in \texttt{part4/}:
+The script generates four deliverables in \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4}{\texttt{part4/}}:
 \begin{itemize}
     \item Action Table CSV: \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/action_table.csv}{\texttt{action\_table.csv}}
     \item GOTO Table CSV: \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part4/goto_table.csv}{\texttt{goto\_table.csv}}
@@ -730,61 +1113,70 @@ From the generated summary report:
 
 \subsection{Matrix Design Notes}
 
-The HTML renderer intentionally combines ACTION and GOTO into a single wide matrix:
+We recommend viewing the HTML file in a web browser. The HTML renderer intentionally combines ACTION and GOTO into a single wide matrix:
 \begin{center}
 \texttt{State | ACTION terminals ... | GOTO non-terminals ...}
 \end{center}
 
-To make a large LALR table usable, the following UX-level features were included:
-\begin{itemize}
-    \item grouped section headers for ACTION and GOTO,
-    \item sticky top headers,
-    \item sticky state column,
-    \item scroll container for high-column matrices.
-\end{itemize}
+To make a large LALR table usable, the UX-level such as grouped section headers for ACTION and GOTO, sticky top headers, sticky state column, and scroll container for high-column matrices were included:
+% \begin{itemize}
+%     \item grouped section headers for ACTION and GOTO,
+%     \item sticky top headers,
+%     \item sticky state column,
+%     \item scroll container for high-column matrices.
+% \end{itemize}
 
 \begin{figure}[h!]
     \centering
     % Add screenshot of parsing_table_matrix.html opened in a browser.
-    \fbox{\parbox{0.92\textwidth}{\centering
-    Placeholder: Insert browser screenshot of parsing\_table\_matrix.html (single ACTION+GOTO matrix).
-    }}
+    % \fbox{\parbox{0.92\textwidth}{\centering
+    % Placeholder: Insert browser screenshot of parsing\_table\_matrix.html (single ACTION+GOTO matrix).
+    % }}
+    \includegraphics[width=\textwidth]{./Images/parsing_table_html.png}
     \caption{Single-matrix LALR(1) table view generated for Part 4.}
     \label{fig:part4_matrix_html}
 \end{figure}
 
-\subsection{Representative Implementation Snippets}
+% \subsection{Representative Implementation Snippets}
 
-\begin{lstlisting}[language=Python, caption={State and ACTION/GOTO extraction strategy}]
-state_re = re.compile(r"^State\s+(\d+)\s*$")
-shift_re = re.compile(r"^\s+(\S+)\s+\[?shift, and go to state\s+(\d+)\]?")
-reduce_re = re.compile(r"^\s+(\S+)\s+\[?reduce using rule\s+(\d+)\s+\(([^)]+)\)\]?")
+% \begin{lstlisting}[language=Python, caption={State and ACTION/GOTO extraction strategy}]
+% state_re = re.compile(r"^State\s+(\d+)\s*$")
+% shift_re = re.compile(r"^\s+(\S+)\s+\[?shift, and go to state\s+(\d+)\]?")
+% reduce_re = re.compile(r"^\s+(\S+)\s+\[?reduce using rule\s+(\d+)\s+\(([^)]+)\)\]?")
 
-if symbol in nonterminals:
-    add_cell(row_goto, symbol, target)
-else:
-    add_cell(row_action, symbol, f"s{target}")
-\end{lstlisting}
-
-The script also merges repeated entries in a cell as \texttt{value1 / value2}, preserving conflict visibility where applicable.
+% if symbol in nonterminals:
+%     add_cell(row_goto, symbol, target)
+% else:
+%     add_cell(row_action, symbol, f"s{target}")
+% \end{lstlisting}
 
 \newpage
+
 \section{Part 5: Error Diagnostics}
 
-Part 5 focuses on actionable syntax diagnostics. The implemented behavior reports:
+Part 5 focuses on actionable syntax diagnostics that are useful for debugging. Before, error reporting was very minimal and it was just indicating a syntax error without any context or location information.
+The implemented behavior reports:
 \begin{itemize}
-    \item exact line and column,
+    \item exact location - line and column,
     \item the unexpected token actually seen,
     \item expected-token hints.
 \end{itemize}
 
+You can run the Part-5 diagnostic test suite with:
+\begin{lstlisting}
+make part5
+\end{lstlisting}
+and the errors will be written in \href{https://github.com/ShardulJunagade/compilers-cylite/tree/main/cylite_A3/part5/tests}{\texttt{part5/tests/}} as \texttt{output\_diag\_*.txt} files.
+
+
 \subsection{Diagnostic Architecture}
 
-The solution spans both lexer and parser:
-\begin{enumerate}
-    \item Lexer tracks token start coordinates (\texttt{yytok\_line}, \texttt{yytok\_col}) through \texttt{YY\_USER\_ACTION}.
-    \item Parser uses a custom \texttt{yyerror()} path that prints structured syntax diagnostics.
-\end{enumerate}
+The final implementation is a coordinated lexer+parser pipeline rather than a single \texttt{yyerror()} patch. We changed both \texttt{yapl.l} and \texttt{yapl.y} so that the parser always receives token-start coordinates, and then formats errors consistently.
+
+\vspace{0.6cm}
+\textbf{1) Lexer-side location capture (\texttt{yapl.l})}
+
+The scanner now maintains running cursor state using \texttt{yyline} and \texttt{yycol}. For every matched token, \texttt{YY\_USER\_ACTION} snapshots the current cursor into \texttt{yytok\_line}/\texttt{yytok\_col} before consuming text. Then \texttt{update\_position(yytext)} advances the cursor based on the matched lexeme length (including newlines).
 
 \begin{lstlisting}[language=C, caption={Token-position capture in yapl.l}]
 int yyline = 1;
@@ -794,6 +1186,11 @@ int yytok_col = 1;
 
 #define YY_USER_ACTION yytok_line = yyline; yytok_col = yycol; update_position(yytext);
 \end{lstlisting}
+
+\vspace{0.5cm}
+\textbf{2) Parser-side diagnostic formatting (\texttt{yapl.y})}
+
+In the parser, \texttt{\%define parse.error verbose} enables Bison's detailed message text (including expected-token candidates). We then pass that message through a custom formatter:
 
 \begin{lstlisting}[language=C, caption={Parser-side diagnostic formatter in yapl.y}]
 static void print_syntax_diagnostics(const char *s)
@@ -805,26 +1202,35 @@ static void print_syntax_diagnostics(const char *s)
     printf("***parsing terminated*** [syntax error]\n");
     printf("line %d, column %d: unexpected token \"%s\"\n", yytok_line, yytok_col, tok);
 
-    expecting = strstr(s, "expecting ");
-    if (expecting != NULL) printf("expected: %s\n", expecting + 10);
+    if (s != NULL)
+    {
+        expecting = strstr(s, "expecting ");
+        if (expecting != NULL) printf("expected: %s\n", expecting + 10);
+    }
 }
 \end{lstlisting}
 
-\subsection{Diagnostic Test Suite and Coverage}
+\vspace{0.5cm}
+So the reported position comes from lexer-tracked token starts, while the ``expected'' list comes from Bison's parse state. This is why diagnostics now read as: what was seen, where it was seen, and what was expected.
 
-Invalid test programs were added under \texttt{part5/tests} and executed through \texttt{make part5}. Current suite:
+Overall, the key improvement is that diagnostics are now context-bearing and actionable: they identify the exact token boundary, show the unexpected symbol, and provide parser-driven recovery hints.
+
+
+
+\subsection{Diagnostic Test Suite and Output Samples}
+
+The following invalid test programs were added under \texttt{part5/tests}, and these can be run with \texttt{make part5}:
 \begin{itemize}
-    \item \texttt{diag\_missing\_semicolon.cyl}
-    \item \texttt{diag\_unexpected\_else.cyl}
-    \item \texttt{diag\_missing\_semicolon\_after\_print.cyl}
-    \item \texttt{diag\_missing\_closing\_brace.cyl}
-    \item \texttt{diag\_bad\_for\_range\_syntax.cyl}
-    \item \texttt{diag\_bad\_try\_except\_syntax.cyl}
-    \item \texttt{diag\_invalid\_character.cyl}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_missing_semicolon.cyl}{\texttt{diag\_missing\_semicolon.cyl}}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_unexpected_else.cyl}{\texttt{diag\_unexpected\_else.cyl}}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_missing_semicolon_after_print.cyl}{\texttt{diag\_missing\_semicolon\_after\_print.cyl}}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_missing_closing_brace.cyl}{\texttt{diag\_missing\_closing\_brace.cyl}}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_bad_for_range_syntax.cyl}{\texttt{diag\_bad\_for\_range\_syntax.cyl}}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_bad_try_except_syntax.cyl}{\texttt{diag\_bad\_try\_except\_syntax.cyl}}
+    \item \href{https://github.com/ShardulJunagade/compilers-cylite/blob/main/cylite_A3/part5/tests/diag_invalid_character.cyl}{\texttt{diag\_invalid\_character.cyl}}
 \end{itemize}
 
-\subsection{Representative Output Samples}
-
+Few of the output samples from running these tests are shown below.
 \begin{lstlisting}
 ./yapl part5/tests/diag_missing_semicolon.cyl
 ***parsing terminated*** [syntax error]
@@ -845,26 +1251,47 @@ expected: '{'
 line 4, column 5: unexpected token "@"
 \end{lstlisting}
 
-\begin{figure}[h!]
-    \centering
-    % Add screenshot: make part5 output showing multiple failing tests with line/column diagnostics.
-    \fbox{\parbox{0.9\textwidth}{\centering
-    Placeholder: Insert terminal screenshot of make part5 diagnostics output.
-    }}
-    \caption{Part 5 diagnostics run on intentionally invalid CYLite inputs.}
-    \label{fig:part5_diag_terminal}
-\end{figure}
+% \begin{figure}[h!]
+%     \centering
+%     Add screenshot: make part5 output showing multiple failing tests with line/column diagnostics.
+%     \fbox{\parbox{0.9\textwidth}{\centering
+%     Placeholder: Insert terminal screenshot of make part5 diagnostics output.
+%     }}
+%     \caption{Part 5 diagnostics run on intentionally invalid CYLite inputs.}
+%     \label{fig:part5_diag_terminal}
+% \end{figure}
 
 \newpage
-\section{Execution Instructions (Parts 3, 4, 5)}
+\section{Part 6: Additional Information}
 
-This section provides a direct, submission-ready command sequence.
+\subsection{Challenges}
+
+\begin{itemize}
+    \item \textbf{Conflict isolation in large automata:} With hundreds of LALR states, tracing each warning back to the exact grammar overlap (especially for \texttt{if-elif-else}, \texttt{ATOMIC}, and comma behavior) required repeated state-by-state inspection of \texttt{yapl.output}.
+    \item \textbf{Keeping semantics correct while fixing syntax conflicts:} Several fixes changed rule structure and action positions, so we had to ensure counters such as \texttt{ladder\_len} and \texttt{pointer\_decls} still produced correct values after grammar refactoring.
+\end{itemize}
+
+\subsection{Learnings}
+
+This assignment gave us a complete hands-on view of how a practical parser is built and stabilized, not just how it works in theory. We learned to read LALR(1) states from \texttt{yapl.output}, pinpoint real conflict sources, and resolve them using grammar restructuring, precedence, and safer semantic-action placement. We also learned that good compiler work is not only about accepting valid programs: reverse-derivation tracing, table extraction, and line-column diagnostics made the parser easier to inspect, debug, and explain.
+
+\subsection{Conclusion}
+
+This report documents the work from grammar extension to a working, testable parser toolchain for CYLite. In Part 1, we constructed and analyzed the LALR(1) automaton; in Part 2, we resolved shift/reduce and reduce/reduce conflicts with explicit, verifiable grammar changes; in Part 3, we captured and rendered reverse derivations from real parser reductions; in Part 4, we converted verbose parser output into reproducible ACTION/GOTO tables and a usable matrix view; and in Part 5, we implemented error diagnostics with token-level location and expectation hints. The final system is now conflict-resolved and functionally correct, and suitable for further semantic-analysis work in the next stage.
+
+
+\newpage
+\appendix
+\section{Appendix A: Execution Instructions}
+
+This appendix provides a complete runbook for the full Assignment 3 pipeline (Parts 1 to 6), from automaton generation and conflict analysis to reverse derivation output, table generation, and diagnostics.
 
 \subsection{Prerequisites}
 \begin{itemize}
     \item Linux/WSL shell environment
     \item \texttt{bison}, \texttt{flex} (or \texttt{lex}), \texttt{gcc}
-    \item \texttt{graphviz} (for SVG visualization in Part 3)
+    \item \texttt{python3} (for Part 4 table generator)
+    \item \texttt{graphviz} (for SVG output in Part 3)
 \end{itemize}
 
 Quick checks:
@@ -872,50 +1299,115 @@ Quick checks:
 bison --version
 flex --version
 gcc --version
+python3 --version
 dot -V
 \end{lstlisting}
 
-\subsection{Build}
+\subsection{Build and Baseline Setup}
 \begin{lstlisting}
 cd cylite_A3
 make clean
 make
 \end{lstlisting}
 
-\subsection{Run Part 3}
+\subsection{Part 1: LALR(1) Automaton Construction and Conflict Discovery}
+Generate the parser tables and verbose automaton report:
+\begin{lstlisting}
+bison -v -d -o y.tab.c yapl.y
+\end{lstlisting}
+
+Inspect the generated \texttt{yapl.output} file to identify:
+\begin{itemize}
+    \item states containing Shift/Reduce or Reduce/Reduce conflicts,
+    \item exact productions involved in each conflict,
+    \item transitions relevant to \texttt{if-elif-else}, \texttt{ATOMIC}, and comma-expression ambiguity.
+\end{itemize}
+
+Optional quick conflict scan:
+\begin{lstlisting}
+grep -n "conflict" yapl.output
+\end{lstlisting}
+
+\subsection{Part 2: Conflict Resolution Validation}
+After grammar edits in \texttt{yapl.y}, regenerate and verify the parser:
+\begin{lstlisting}
+make
+bison -v -d -o y.tab.c yapl.y
+\end{lstlisting}
+
+% Then compare conflict behavior before/after using:
+% \begin{itemize}
+%     \item updated \texttt{yapl.output} states,
+%     \item representative parser inputs that previously triggered ambiguity,
+%     \item successful parsing runs showing deterministic behavior.
+% \end{itemize}
+
+\subsection{Run Part 3: Reverse Derivation Tree}
+Run the Part 3 suite:
 \begin{lstlisting}
 make part3
 \end{lstlisting}
-This executes all Part 3 parser tests, writes SVG outputs in \texttt{part3/tests/}, and saves terminal outputs in \texttt{part3/tests/output\_*.txt}.
 
-\subsection{Run Part 4}
+This executes parser runs on Part 3 tests, prints reverse derivations, writes SVG outputs in \texttt{part3/tests/}, and stores terminal logs in \texttt{part3/tests/output\_*.txt}.
+
+\subsection{Run Part 4: Parsing Table Matrix Output}
+Run the Part 4 generator:
 \begin{lstlisting}
 make part4
 \end{lstlisting}
-This regenerates \texttt{yapl.output} and all matrix artifacts in \texttt{part4/}.
 
-\subsection{Run Part 5}
+Generated artifacts are stored in \texttt{part4/}.
+% \begin{itemize}
+%     \item \texttt{action\_table.csv}
+%     \item \texttt{goto\_table.csv}
+%     \item \texttt{parsing\_table\_summary.md}
+%     \item \texttt{parsing\_table\_matrix.html}
+% \end{itemize}
+
+\subsection{Run Part 5: Error Diagnostics}
+Run the diagnostic suite:
 \begin{lstlisting}
 make part5
 \end{lstlisting}
-These cases are intentionally invalid. Non-zero parse exits are expected and are ignored by Make for demonstration.
-Each test also writes its parser output into \texttt{part5/tests/output\_diag\_*.txt}.
+Per-test outputs are stored as \texttt{part5/tests/output\_diag\_*.txt}.
 
 \subsection{Optional Full Cleanup}
 \begin{lstlisting}
 make distclean
 \end{lstlisting}
-This removes parser-generated files and Part 3/Part 4 generated artifacts.
+This removes parser-generated files and generated artifacts.
 
-\section{Conclusion}
 
-Parts 3, 4, and 5 extend the parser from a correctness-only front-end into a usable compiler component with traceability, observability, and practical feedback loops:
+\newpage
+\section{Appendix B: CYLite Additions over Base YAPL}
+
+This appendix summarizes the key language and implementation additions introduced in CYLite beyond the baseline YAPL setup, as specified in the language specification.
+
+\subsection{Lexical Additions}
 \begin{itemize}
-    \item Part 3 provides derivation introspection in both text and graph forms.
-    \item Part 4 makes the LALR(1) table reproducible, auditable, and presentation-ready.
-    \item Part 5 improves developer experience by turning generic syntax failure into contextual diagnostics.
+    \item New reserved keywords: \texttt{elif}, \texttt{pass}, \texttt{try}, \texttt{except}, \texttt{print}, \texttt{range}, \texttt{in}, \texttt{foreach}.
+    \item Additional single-line comment style: \texttt{\# ...}.
+    \item Improved position tracking support through token-start coordinates for diagnostics.
 \end{itemize}
 
-Together with the completed conflict work from Parts 1 and 2, this delivers a robust Assignment-3 implementation aligned with both formal parser requirements and real debugging workflows.
+\subsection{Grammar-Level Additions}
+\begin{itemize}
+    \item \textbf{Elif ladder support:} explicit \texttt{elif\_list} integration in selection statements.
+    \item \textbf{Explicit no-op:} \texttt{PASS\textquotesingle;\textquotesingle} added as a statement alternative.
+    \item \textbf{Try/except block:} \texttt{try\_except\_statement} integrated into \texttt{statement}.
+    \item \textbf{Range-based for form:} \texttt{FOR\textquotesingle(\textquotesingle\ IDENTIFIER IN RANGE\textquotesingle(\textquotesingle\ assignment\_expression\textquotesingle,\textquotesingle\ assignment\_expression\textquotesingle)\textquotesingle\textquotesingle)\textquotesingle\ statement}.
+    \item \textbf{Foreach form:} \texttt{FOREACH\textquotesingle(\textquotesingle\ IDENTIFIER IN expression\textquotesingle)\textquotesingle\ compound\_statement}.
+    \item \textbf{Print built-in:} \texttt{PRINT\textquotesingle(\textquotesingle\textquotesingle)\textquotesingle} and \texttt{PRINT\textquotesingle(\textquotesingle\ expression\textquotesingle)\textquotesingle} in \texttt{postfix\_expression}.
+\end{itemize}
+
+% \subsection{Conflict-Resolution and Parser Engineering Changes}
+% \begin{itemize}
+%     \item Precedence declarations added to resolve dangling-else and related ambiguities (\texttt{LOWER\_THAN\_ELSE}, \texttt{ELIF}, \texttt{ELSE}).
+%     \item \texttt{ATOMIC} qualifier/specifier ambiguity controlled using precedence override.
+%     \item Comma handling clarified using \texttt{\%left ','} and expression-grammar cleanup.
+%     \item Pointer declaration semantic action relocated to avoid mid-rule conflict behavior.
+% \end{itemize}
+
+These additions collectively transform the baseline YAPL parser into CYLite: a C-like core with Python-inspired control-flow ergonomics, richer diagnostics, and stronger parser introspection tooling.
 
 \end{document}
