@@ -140,105 +140,17 @@ extern int yydebug;
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
-/* Token kinds.  */
-#define YYEMPTY -2
-#define YYEOF 0
-#define YYerror 256
-#define YYUNDEF 257
-#define ELIF 258
-#define PASS 259
-#define TRY 260
-#define EXCEPT 261
-#define PRINT 262
-#define RANGE 263
-#define IN 264
-#define FOREACH 265
-#define IDENTIFIER 266
-#define I_CONSTANT 267
-#define F_CONSTANT 268
-#define STRING_LITERAL 269
-#define FUNC_NAME 270
-#define SIZEOF 271
-#define PTR_OP 272
-#define INC_OP 273
-#define DEC_OP 274
-#define LEFT_OP 275
-#define RIGHT_OP 276
-#define LE_OP 277
-#define GE_OP 278
-#define EQ_OP 279
-#define NE_OP 280
-#define TH_OP 281
-#define AND_OP 282
-#define OR_OP 283
-#define MUL_ASSIGN 284
-#define DIV_ASSIGN 285
-#define MOD_ASSIGN 286
-#define ADD_ASSIGN 287
-#define SUB_ASSIGN 288
-#define LEFT_ASSIGN 289
-#define RIGHT_ASSIGN 290
-#define AND_ASSIGN 291
-#define XOR_ASSIGN 292
-#define OR_ASSIGN 293
-#define TYPEDEF_NAME 294
-#define ENUMERATION_CONSTANT 295
-#define TYPEDEF 296
-#define EXTERN 297
-#define STATIC 298
-#define AUTO 299
-#define REGISTER 300
-#define INLINE 301
-#define CONST 302
-#define RESTRICT 303
-#define VOLATILE 304
-#define BOOL 305
-#define CHAR 306
-#define SHORT 307
-#define INT 308
-#define LONG 309
-#define SIGNED 310
-#define UNSIGNED 311
-#define FLOAT 312
-#define DOUBLE 313
-#define VOID 314
-#define COMPLEX 315
-#define IMAGINARY 316
-#define STRUCT 317
-#define UNION 318
-#define ENUM 319
-#define ELLIPSIS 320
-#define CASE 321
-#define DEFAULT 322
-#define IF 323
-#define ELSE 324
-#define SWITCH 325
-#define WHILE 326
-#define DO 327
-#define FOR 328
-#define GOTO 329
-#define CONTINUE 330
-#define BREAK 331
-#define RETURN 332
-#define ALIGNAS 333
-#define ALIGNOF 334
-#define ATOMIC 335
-#define GENERIC 336
-#define NORETURN 337
-#define STATIC_ASSERT 338
-#define THREAD_LOCAL 339
-#define LOWER_THAN_ELSE 340
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 87 "yapl.y"
+#line 91 "yapl.y"
 
 	int val;
 	struct symtab *symp;
 
-#line 242 "y.tab.h"
+#line 154 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

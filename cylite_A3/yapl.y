@@ -8,6 +8,8 @@
 #include<sys/wait.h>
 #include<unistd.h>
 extern char *yytext;
+extern int yytok_line;
+extern int yytok_col;
 int yylex(void);
 void yyerror(const char *s);
 int global_declarations=0;
@@ -69,6 +71,8 @@ static void free_derivation_steps(void);
 %token <val> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
+
+%define parse.error verbose
 
 /* Precedence for Comma to fix the Reduce/Reduce conflict */
 %left ','
@@ -987,12 +991,35 @@ static void free_derivation_steps(void)
 	reset_pending();
 }
 
+static void print_syntax_diagnostics(const char *s)
+{
+	const char *tok = "<end-of-input>";
+	const char *expecting = NULL;
+
+	if (yytext != NULL && yytext[0] != '\0')
+	{
+		tok = yytext;
+	}
+
+	printf("***parsing terminated*** [syntax error]\n");
+	printf("line %d, column %d: unexpected token \"%s\"\n", yytok_line, yytok_col, tok);
+
+	if (s != NULL)
+	{
+		expecting = strstr(s, "expecting ");
+		if (expecting != NULL)
+		{
+			printf("expected: %s\n", expecting + 10);
+		}
+	}
+}
+
 void yyerror(const char *s)
 {
 	fflush(stdout);
 	
 	if(mode==-1)
-		printf("***parsing terminated*** [syntax error]\n");
+		print_syntax_diagnostics(s);
 	else if(mode==0 || mode==1)
 		printf("%s\n",s);
 		

@@ -1,4 +1,4 @@
-# Assignment-3 Runbook (Up to Part 4)
+# Assignment-3 Runbook (Up to Part 5)
 
 This runbook is for the workspace folder `cylite_A3` and covers:
 - Building and validating parser changes
@@ -6,6 +6,7 @@ This runbook is for the workspace folder `cylite_A3` and covers:
 - Running Part 3 (reverse derivation tree) in terminal
 - Generating Graphviz visualization for Part 3
 - Running Part 4 (LALR(1) parsing table output in matrix format)
+- Running Part 5 (error diagnostics)
 
 ## 1. Prerequisites
 
@@ -169,7 +170,32 @@ The HTML output displays a single matrix in this structure:
 ./yapl part3/tests/rdt_extensions.cyl > part3/parse_output.txt
 ```
 
-## 8. Added Part-3 test inputs
+## 8. Part 5: Error Diagnostics
+
+Part 5 requires meaningful syntax error messages that help locate the cause.
+
+Current parser diagnostics include:
+- exact failure location: line and column
+- unexpected token (`yytext`)
+- expected tokens (from Bison verbose error details, when available)
+
+### 8.1 Run Part 5 demo via Makefile
+
+```bash
+cd cylite_A3
+make part5
+```
+
+Notes:
+- This target intentionally runs invalid test programs.
+- Non-zero exits are expected and shown as diagnostics, not build failures.
+
+### 8.2 Part 5 diagnostic test inputs
+
+- `part5/tests/diag_missing_semicolon.cyl`
+- `part5/tests/diag_unexpected_else.cyl`
+
+## 9. Added Part-3 test inputs
 
 New parser-focused CYLite tests were added under `part3/tests`:
 - `part3/tests/rdt_basic.cyl`
@@ -186,10 +212,10 @@ Suggested validation commands:
 ./yapl part3/tests/rdt_print_strings.cyl --png part3/tests/rdt_print_strings.png
 ```
 
-## 9. Assignment-wide runner
+## 10. Assignment-wide runner
 
 To build and run current assignment tests (Part 3 set):
 
 ```bash
-./run_tests.sh
+make part3
 ```

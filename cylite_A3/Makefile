@@ -1,4 +1,4 @@
-.PHONY: part3 part4 clean distclean
+.PHONY: part3 part4 part5 clean distclean
 
 yapl: y.tab.c lex.yy.c
 	gcc -O3 lex.yy.c y.tab.c -o yapl
@@ -15,9 +15,19 @@ part4: yapl.output
 	python3 part4/generate_parsing_table.py yapl.output part4
 	@echo "Part 4 tables generated in part4/"
 
+part5: yapl
+	@echo "Part 5 diagnostics demo (errors are expected):"
+	-./yapl part5/tests/diag_missing_semicolon.cyl
+	-./yapl part5/tests/diag_unexpected_else.cyl
+	-./yapl part5/tests/diag_missing_semicolon_after_print.cyl
+	-./yapl part5/tests/diag_missing_closing_brace.cyl
+	-./yapl part5/tests/diag_bad_for_range_syntax.cyl
+	-./yapl part5/tests/diag_bad_try_except_syntax.cyl
+	-./yapl part5/tests/diag_invalid_character.cyl
+
 y.tab.c: yapl.y 
 # 	bison -d yapl.y
-	bison -y -d yapl.y
+	bison -d -o y.tab.c yapl.y
 
 yapl.output: yapl.y
 	bison -v -d yapl.y
