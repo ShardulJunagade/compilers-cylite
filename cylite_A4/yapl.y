@@ -19,6 +19,7 @@ int pointer_decls=0;
 int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
+int label_count = 0;
 
 struct quadruple {
     char op[10];
@@ -36,6 +37,12 @@ char* new_temp() {
     char* t = (char*)malloc(10);
     sprintf(t, "t%d", ++temp_count);
     return t;
+}
+
+char* new_label() {
+    char* l = (char*)malloc(10);
+    sprintf(l, "L%d", ++label_count);
+    return l;
 }
 
 /* Records a new row in our table */
@@ -289,53 +296,110 @@ additive_expression
     ;
 
 shift_expression
-	: additive_expression
+	: additive_expression {strcpy($$, $1); };
 	| shift_expression LEFT_OP additive_expression
 	| shift_expression RIGHT_OP additive_expression
 	;
 
 relational_expression
-	: shift_expression
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
-	| relational_expression TH_OP shift_expression
-	;
+    : shift_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | relational_expression '<' shift_expression
+    {
+        char* t = new_temp();
+        emit("<", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression '>' shift_expression
+    {
+        char* t = new_temp();
+        emit(">", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression LE_OP shift_expression
+    {
+        char* t = new_temp();
+        emit("<=", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression GE_OP shift_expression
+    {
+        char* t = new_temp();
+        emit(">=", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression TH_OP shift_expression
+    {
+        char* t = new_temp();
+        emit("<=>", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 equality_expression
-	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
-	;
+    : relational_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | equality_expression EQ_OP relational_expression
+    {
+        char* t = new_temp();
+        emit("==", $1, $3, t);
+        strcpy($$, t);
+    }
+    | equality_expression NE_OP relational_expression
+    {
+        char* t = new_temp();
+        emit("!=", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 and_expression
-	: equality_expression
+	: equality_expression { strcpy($$, $1); };
 	| and_expression '&' equality_expression
 	;
 
 exclusive_or_expression
-	: and_expression
+	: and_expression { strcpy($$, $1); };
 	| exclusive_or_expression '^' and_expression
 	;
 
 inclusive_or_expression
-	: exclusive_or_expression
+	: exclusive_or_expression { strcpy($$, $1); };
 	| inclusive_or_expression '|' exclusive_or_expression
 	;
 
 logical_and_expression
-	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
-	;
+    : inclusive_or_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | logical_and_expression AND_OP inclusive_or_expression
+    {
+        char* t = new_temp();
+        emit("&&", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 logical_or_expression
-	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
-	;
+    : logical_and_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | logical_or_expression OR_OP logical_and_expression
+    {
+        char* t = new_temp();
+        emit("||", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 conditional_expression
-	: logical_or_expression
+	: logical_or_expression { strcpy($$, $1); };
 	;
 
 assignment_expression
@@ -690,36 +754,249 @@ elif_list
 	;
 
 selection_statement
-    : IF '(' expression ')' statement ELSE { ladder_len++; $6 = (ladder_len-1); } statement 
-        { 
-            if(ladder_len >= max) { max = ladder_len; } 
-            ladder_len = $6; 
-        }
-    | IF '(' expression ')' statement %prec LOWER_THAN_ELSE 
-        { ifs_wo_else++; }
-    | IF '(' expression ')' statement elif_list ELSE 
-        { ladder_len++; $7 = (ladder_len-1); } 
+    /* ------------------------------------------------------------------
+       RULE 1: Standard IF-ELSE
+       Indices: IF($1) '('($2) expr($3) ')'($4) {mid1}($5) stmt($6) 
+                ELSE($7) {mid2}($8) stmt($9)
+       ------------------------------------------------------------------ */
+    : IF '(' expression ')' 
+      {
+          /* Mid-rule 1 ($5): Generate jump if condition is false */
+          char *l_else = new_label();
+          emit("ifFalse", $3, "", l_else);
+          $<name>$ = l_else; 
+      }
+      statement ELSE 
+      {
+          /* Mid-rule 2 ($8): Main IF is done, jump over the ELSE block */
+          char *l_end = new_label();
+          emit("goto", l_end, "", "");
+          
+          /* Place the ELSE label here */
+          emit("LABEL", $<name>5, "", ""); 
+          
+          /* YOUR LAB 3 LOGIC: We store this in the ELSE token's value ($7) */
+          ladder_len++; 
+          $<val>7 = (ladder_len - 1); 
+          
+          /* Store the END label for the final action ($8) */
+          $<name>$ = l_end;
+      }
       statement 
-        { 
-            if(ladder_len >= max) { max = ladder_len; } 
-            ladder_len = $7; 
-        }
-    | IF '(' expression ')' statement elif_list %prec LOWER_THAN_ELSE
-        { /* Logic for if-elif without final else */ }
+      {
+          /* Final Action: Place the END label */
+          emit("LABEL", $<name>8, "", ""); 
+          
+          /* YOUR LAB 3 LOGIC: Retrieve from the ELSE token ($7) */
+          if(ladder_len >= max) { max = ladder_len; } 
+          ladder_len = $<val>7; 
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 2: IF without ELSE
+       Indices: IF($1) '('($2) expr($3) ')'($4) {mid1}($5) stmt($6)
+       ------------------------------------------------------------------ */
+    | IF '(' expression ')' 
+      {
+          char *l_end = new_label();
+          emit("ifFalse", $3, "", l_end);
+          $<name>$ = l_end; /* $5 */
+      }
+      statement %prec LOWER_THAN_ELSE 
+      {
+          emit("LABEL", $<name>5, "", "");
+          ifs_wo_else++;
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 3: IF-ELIF-ELSE
+       Indices: IF($1) '('($2) expr($3) ')'($4) {mid1}($5) stmt($6) 
+                elif_list($7) ELSE($8) {mid2}($9) stmt($10)
+       ------------------------------------------------------------------ */
+    | IF '(' expression ')' 
+      {
+          char *l_next = new_label();
+          emit("ifFalse", $3, "", l_next);
+          $<name>$ = l_next; /* $5 */
+      }
+      statement elif_list ELSE 
+      {
+          char *l_end = new_label();
+          emit("goto", l_end, "", "");
+          emit("LABEL", $<name>5, "", "");
+          
+          /* YOUR LAB 3 LOGIC: Store in the ELSE token's value ($8) */
+          ladder_len++; 
+          $<val>8 = (ladder_len - 1); 
+          
+          $<name>$ = l_end; /* $9 */
+      } 
+      statement 
+      { 
+          emit("LABEL", $<name>9, "", "");
+          
+          /* YOUR LAB 3 LOGIC: Retrieve from the ELSE token ($8) */
+          if(ladder_len >= max) { max = ladder_len; } 
+          ladder_len = $<val>8; 
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 4: IF-ELIF (No final else)
+       Indices: IF($1) '('($2) expr($3) ')'($4) {mid1}($5) stmt($6) elif($7)
+       ------------------------------------------------------------------ */
+    | IF '(' expression ')' 
+      {
+          char *l_next = new_label();
+          emit("ifFalse", $3, "", l_next);
+          $<name>$ = l_next; /* $5 */
+      }
+      statement elif_list %prec LOWER_THAN_ELSE
+      { 
+          emit("LABEL", $<name>5, "", "");
+          /* Logic for if-elif without final else */ 
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 5: SWITCH
+       ------------------------------------------------------------------ */
     | SWITCH '(' expression ')' statement
     ;
 
-
 iteration_statement
-	: WHILE '(' expression ')' statement
-	| DO statement WHILE '(' expression ')' ';'
-	| FOR '(' expression_statement expression_statement ')' statement
-	| FOR '(' expression_statement expression_statement expression ')' statement
-	| FOR '(' declaration expression_statement ')' statement
-	| FOR '(' declaration expression_statement expression ')' statement
-	| FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' statement
-	| FOREACH '(' IDENTIFIER IN expression ')' compound_statement
-	;
+    /* ------------------------------------------------------------------
+       RULE 1: WHILE Loop
+       Indices: WHILE($1) {mid1}($2) '('($3) expr($4) ')'($5) {mid2}($6) stmt($7)
+       ------------------------------------------------------------------ */
+    : WHILE 
+      {
+          char *l_start = new_label();
+          emit("LABEL", l_start, "", "");
+          $<name>$ = l_start; /* $2: Save start label */
+      }
+      '(' expression ')' 
+      {
+          char *l_end = new_label();
+          emit("ifFalse", $4, "", l_end);
+          $<name>$ = l_end; /* $6: Save end label */
+      }
+      statement
+      {
+          emit("goto", $<name>2, "", "");   /* Jump back to start */
+          emit("LABEL", $<name>6, "", "");  /* Exit target */
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 2: DO-WHILE Loop
+       Indices: DO($1) {mid1}($2) stmt($3) WHILE($4) '('($5) expr($6) ')'($7) ';'($8)
+       ------------------------------------------------------------------ */
+    | DO 
+      {
+          char *l_start = new_label();
+          emit("LABEL", l_start, "", "");
+          $<name>$ = l_start; /* $2 */
+      }
+      statement WHILE '(' expression ')' ';'
+      {
+          char *l_end = new_label();
+          emit("ifFalse", $6, "", l_end);
+          emit("goto", $<name>2, "", "");   /* If true, loop back */
+          emit("LABEL", l_end, "", "");     /* Otherwise, exit */
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 3: Standard FOR Loop (with 3 expressions)
+       Indices: FOR($1) '('($2) expr_stmt($3) {mid1}($4) expr_stmt($5) 
+                {mid2}($6) expr($7) {mid3}($8) ')'($9) stmt($10)
+       ------------------------------------------------------------------ */
+    | FOR '(' expression_statement 
+      {
+          /* INIT is done. Mark start of CONDITION */
+          char *l_cond = new_label();
+          emit("LABEL", l_cond, "", "");
+          $<name>$ = l_cond; /* $4 */
+      }
+      expression_statement 
+      {
+          /* CONDITION is evaluated. Prepare jumps. */
+          char *l_body = new_label();
+          char *l_inc = new_label();
+          char *l_end = new_label();
+          
+          emit("ifFalse", $5, "", l_end); 
+          emit("goto", l_body, "", "");
+          emit("LABEL", l_inc, "", "");
+          
+          /* Pack 3 labels into a single string to pass forward */
+          sprintf($<name>$, "%s %s %s", l_body, l_inc, l_end); /* $6 */
+      }
+      expression 
+      {
+          /* INCREMENT is evaluated. Jump back to condition. */
+          emit("goto", $<name>4, "", ""); 
+          
+          char l_body[10], l_inc[10], l_end[10];
+          sscanf($<name>6, "%s %s %s", l_body, l_inc, l_end);
+          
+          /* Mark start of BODY */
+          emit("LABEL", l_body, "", "");
+          
+          /* Pass the increment and end labels forward */
+          sprintf($<name>$, "%s %s", l_inc, l_end); /* $8 */
+      }
+      ')' statement
+      {
+          /* BODY is done. Unpack the labels. */
+          char l_inc[10], l_end[10];
+          sscanf($<name>8, "%s %s", l_inc, l_end);
+          
+          /* Jump to increment, and place the final exit label */
+          emit("goto", l_inc, "", "");
+          emit("LABEL", l_end, "", "");
+      }
+
+    /* ------------------------------------------------------------------
+       RULE 4: Python-style RANGE Loop (Custom to CYLite)
+       Indices: FOR($1) '('($2) ID($3) IN($4) RANGE($5) '('($6) a_expr($7) 
+                ','($8) a_expr($9) ')'($10) ')'($11) {mid1}($12) stmt($13)
+       ------------------------------------------------------------------ */
+    | FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' 
+      {
+          /* 1. Initialize: ID = start_expr */
+          emit("=", $7, "", $3);
+          
+          char *l_cond = new_label();
+          char *l_end = new_label();
+          emit("LABEL", l_cond, "", "");
+          
+          /* 2. Condition: ID <= end_expr */
+          char *t_cond = new_temp();
+          emit("<=", $3, $9, t_cond);
+          emit("ifFalse", t_cond, "", l_end);
+          
+          /* Pack labels and the ID name */
+          sprintf($<name>$, "%s %s %s", l_cond, l_end, $3); /* $12 */
+      }
+      statement
+      {
+          char l_cond[10], l_end[10], id_name[50];
+          sscanf($<name>12, "%s %s %s", l_cond, l_end, id_name);
+          
+          /* 3. Increment: ID = ID + 1 */
+          char *t_inc = new_temp();
+          emit("+", id_name, "1", t_inc);
+          emit("=", t_inc, "", id_name);
+          
+          /* 4. Loop back to condition check */
+          emit("goto", l_cond, "", "");
+          emit("LABEL", l_end, "", "");
+      }
+
+    /* (Leaving the missing/simplified FOR rules blank for you to fill if needed) */
+    | FOR '(' expression_statement expression_statement ')' statement
+    | FOR '(' declaration expression_statement ')' statement
+    | FOR '(' declaration expression_statement expression ')' statement
+    | FOREACH '(' IDENTIFIER IN expression ')' compound_statement
+    ;
 
 jump_statement
 	: GOTO IDENTIFIER ';'
