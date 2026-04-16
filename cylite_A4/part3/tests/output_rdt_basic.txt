@@ -1,0 +1,100 @@
+***parsing successful***
+#global_declarations = 1
+#function_definitions = 1
+#integer_constants = 2
+#pointers_declarations = 0
+#ifs_without_else = 1
+if-else max-depth = 0
+
+Reverse derivation (top-down)
+================================
+1. translation_unit -> external_declaration
+2. external_declaration -> function_definition
+3. function_definition -> declaration_specifiers declarator compound_statement
+4. compound_statement -> '{' block_item_list '}'
+5. block_item_list -> block_item_list block_item
+6. block_item -> statement
+7. statement -> jump_statement
+8. jump_statement -> RETURN expression ';'
+9. expression -> assignment_expression
+10. assignment_expression -> conditional_expression
+11. conditional_expression -> logical_or_expression
+12. logical_or_expression -> logical_and_expression
+13. logical_and_expression -> inclusive_or_expression
+14. inclusive_or_expression -> exclusive_or_expression
+15. exclusive_or_expression -> and_expression
+16. and_expression -> equality_expression
+17. equality_expression -> relational_expression
+18. relational_expression -> shift_expression
+19. shift_expression -> additive_expression
+20. additive_expression -> multiplicative_expression
+21. multiplicative_expression -> cast_expression
+22. cast_expression -> unary_expression
+23. unary_expression -> postfix_expression
+24. postfix_expression -> primary_expression
+25. primary_expression -> constant
+26. constant -> I_CONSTANT
+27. block_item_list -> block_item_list block_item
+28. block_item -> statement
+29. statement -> selection_statement
+30. selection_statement -> IF '(' expression ')' statement
+31. statement -> PASS ';'
+32. expression -> assignment_expression
+33. assignment_expression -> conditional_expression
+34. conditional_expression -> logical_or_expression
+35. logical_or_expression -> logical_and_expression
+36. logical_and_expression -> inclusive_or_expression
+37. inclusive_or_expression -> exclusive_or_expression
+38. exclusive_or_expression -> and_expression
+39. and_expression -> equality_expression
+40. equality_expression -> relational_expression
+41. relational_expression -> shift_expression
+42. shift_expression -> additive_expression
+43. additive_expression -> multiplicative_expression
+44. multiplicative_expression -> cast_expression
+45. cast_expression -> unary_expression
+46. unary_expression -> postfix_expression
+47. postfix_expression -> primary_expression
+48. primary_expression -> IDENTIFIER
+49. block_item_list -> block_item_list block_item
+50. block_item -> statement
+51. statement -> expression_statement
+52. expression_statement -> expression ';'
+53. expression -> assignment_expression
+54. assignment_expression -> unary_expression assignment_operator assignment_expression
+55. assignment_expression -> conditional_expression
+56. conditional_expression -> logical_or_expression
+57. logical_or_expression -> logical_and_expression
+58. logical_and_expression -> inclusive_or_expression
+59. inclusive_or_expression -> exclusive_or_expression
+60. exclusive_or_expression -> and_expression
+61. and_expression -> equality_expression
+62. equality_expression -> relational_expression
+63. relational_expression -> shift_expression
+64. shift_expression -> additive_expression
+65. additive_expression -> multiplicative_expression
+66. multiplicative_expression -> cast_expression
+67. cast_expression -> unary_expression
+68. unary_expression -> postfix_expression
+69. postfix_expression -> primary_expression
+70. primary_expression -> constant
+71. constant -> I_CONSTANT
+72. assignment_operator -> '='
+73. unary_expression -> postfix_expression
+74. postfix_expression -> primary_expression
+75. primary_expression -> IDENTIFIER
+76. block_item_list -> block_item
+77. block_item -> declaration
+78. declaration -> declaration_specifiers init_declarator_list ';'
+79. init_declarator_list -> init_declarator
+80. init_declarator -> declarator
+81. declarator -> direct_declarator
+82. direct_declarator -> IDENTIFIER
+83. declaration_specifiers -> type_specifier
+84. type_specifier -> INT
+85. declarator -> direct_declarator
+86. direct_declarator -> direct_declarator '(' ')'
+87. direct_declarator -> IDENTIFIER
+88. declaration_specifiers -> type_specifier
+89. type_specifier -> INT
+Reverse derivation SVG written to part3/tests/rdt_basic.svg

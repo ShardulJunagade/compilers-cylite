@@ -1,0 +1,9 @@
+int main() {
+    int i;
+    /* The conflict: Is (1, 10) one expression with a comma operator, 
+       or are they two separate arguments for the range? */
+    for (i in range(1, 10)) {
+        print(i);
+    }
+    return 0;
+}
