@@ -147,10 +147,11 @@ union YYSTYPE
 {
 #line 91 "yapl.y"
 
-	int val;
-	struct symtab *symp;
+    char name[50];  /* Holds variable names or temp names like 't1' */
+    int val;
+    struct symtab *symp; /* Added from your second union */
 
-#line 154 "y.tab.h"
+#line 155 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

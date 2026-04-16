@@ -1,5 +1,5 @@
 
-#line 3 "lex.yy.c"
+#line 2 "lex.yy.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -46,6 +46,7 @@ typedef int16_t flex_int16_t;
 typedef uint16_t flex_uint16_t;
 typedef int32_t flex_int32_t;
 typedef uint32_t flex_uint32_t;
+typedef uint64_t flex_uint64_t;
 #else
 typedef signed char flex_int8_t;
 typedef short int flex_int16_t;
@@ -154,7 +155,7 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 typedef size_t yy_size_t;
 #endif
 
-extern int yyleng;
+extern yy_size_t yyleng;
 
 extern FILE *yyin, *yyout;
 
@@ -197,7 +198,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	int yy_n_chars;
+	yy_size_t yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -266,8 +267,8 @@ static YY_BUFFER_STATE * yy_buffer_stack = NULL; /**< Stack as an array. */
 
 /* yy_hold_char holds the character lost when yytext is formed. */
 static char yy_hold_char;
-static int yy_n_chars;		/* number of characters read into yy_ch_buf */
-int yyleng;
+static yy_size_t yy_n_chars;		/* number of characters read into yy_ch_buf */
+yy_size_t yyleng;
 
 /* Points to current character in buffer. */
 static char *yy_c_buf_p = NULL;
@@ -294,7 +295,7 @@ static void yy_init_buffer ( YY_BUFFER_STATE b, FILE *file  );
 
 YY_BUFFER_STATE yy_scan_buffer ( char *base, yy_size_t size  );
 YY_BUFFER_STATE yy_scan_string ( const char *yy_str  );
-YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, int len  );
+YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, yy_size_t len  );
 
 void *yyalloc ( yy_size_t  );
 void *yyrealloc ( void *, yy_size_t  );
@@ -347,7 +348,7 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
  */
 #define YY_DO_BEFORE_ACTION \
 	(yytext_ptr) = yy_bp; \
-	yyleng = (int) (yy_cp - yy_bp); \
+	yyleng = (yy_size_t) (yy_cp - yy_bp); \
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
@@ -730,7 +731,7 @@ FILE *yyget_out ( void );
 
 void yyset_out  ( FILE * _out_str  );
 
-			int yyget_leng ( void );
+			yy_size_t yyget_leng ( void );
 
 char *yyget_text ( void );
 
@@ -799,7 +800,7 @@ static int input ( void );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		int n; \
+		yy_size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -1135,243 +1136,243 @@ YY_RULE_SETUP
 case 34:
 YY_RULE_SETUP
 #line 90 "yapl.l"
-{ return check_type(); }
+{ 
+    strcpy(yylval.name, yytext);
+    return check_type(); 
+}
 	YY_BREAK
 case 35:
-YY_RULE_SETUP
-#line 92 "yapl.l"
-{ return I_CONSTANT; }
-	YY_BREAK
+#line 96 "yapl.l"
 case 36:
-YY_RULE_SETUP
-#line 93 "yapl.l"
-{ return I_CONSTANT; }
-	YY_BREAK
+#line 97 "yapl.l"
 case 37:
 YY_RULE_SETUP
-#line 94 "yapl.l"
-{ return I_CONSTANT; }
+#line 97 "yapl.l"
+{ 
+    strcpy(yylval.name, yytext); /* Copy "5" or "10" to the parser */
+    return I_CONSTANT; 
+}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 95 "yapl.l"
+#line 102 "yapl.l"
 { return I_CONSTANT; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 97 "yapl.l"
+#line 104 "yapl.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 98 "yapl.l"
+#line 105 "yapl.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 99 "yapl.l"
+#line 106 "yapl.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 100 "yapl.l"
+#line 107 "yapl.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 101 "yapl.l"
+#line 108 "yapl.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 102 "yapl.l"
+#line 109 "yapl.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 45:
 /* rule 45 can match eol */
 YY_RULE_SETUP
-#line 104 "yapl.l"
+#line 111 "yapl.l"
 { return STRING_LITERAL; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 106 "yapl.l"
+#line 113 "yapl.l"
 { return TH_OP; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 107 "yapl.l"
+#line 114 "yapl.l"
 { return INC_OP; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 108 "yapl.l"
+#line 115 "yapl.l"
 { return DEC_OP; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 109 "yapl.l"
+#line 116 "yapl.l"
 { return PTR_OP; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 110 "yapl.l"
+#line 117 "yapl.l"
 { return AND_OP; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 111 "yapl.l"
+#line 118 "yapl.l"
 { return OR_OP; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 112 "yapl.l"
+#line 119 "yapl.l"
 { return LE_OP; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 113 "yapl.l"
+#line 120 "yapl.l"
 { return GE_OP; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 114 "yapl.l"
+#line 121 "yapl.l"
 { return EQ_OP; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 115 "yapl.l"
+#line 122 "yapl.l"
 { return NE_OP; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 116 "yapl.l"
+#line 123 "yapl.l"
 { return ';'; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 117 "yapl.l"
+#line 124 "yapl.l"
 { return '{'; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 118 "yapl.l"
+#line 125 "yapl.l"
 { return '}'; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 119 "yapl.l"
+#line 126 "yapl.l"
 { return ','; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 120 "yapl.l"
+#line 127 "yapl.l"
 { return ':'; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 121 "yapl.l"
+#line 128 "yapl.l"
 { return '='; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 122 "yapl.l"
+#line 129 "yapl.l"
 { return '('; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 123 "yapl.l"
+#line 130 "yapl.l"
 { return ')'; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 124 "yapl.l"
+#line 131 "yapl.l"
 { return '['; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 125 "yapl.l"
+#line 132 "yapl.l"
 { return ']'; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 126 "yapl.l"
+#line 133 "yapl.l"
 { return '.'; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 127 "yapl.l"
+#line 134 "yapl.l"
 { return '&'; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 128 "yapl.l"
+#line 135 "yapl.l"
 { return '!'; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 129 "yapl.l"
+#line 136 "yapl.l"
 { return '~'; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 130 "yapl.l"
+#line 137 "yapl.l"
 { return '-'; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 131 "yapl.l"
+#line 138 "yapl.l"
 { return '+'; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 132 "yapl.l"
+#line 139 "yapl.l"
 { return '*'; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 133 "yapl.l"
+#line 140 "yapl.l"
 { return '/'; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 134 "yapl.l"
+#line 141 "yapl.l"
 { return '%'; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 135 "yapl.l"
+#line 142 "yapl.l"
 { return '<'; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 136 "yapl.l"
+#line 143 "yapl.l"
 { return '>'; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 137 "yapl.l"
+#line 144 "yapl.l"
 { return '^'; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 138 "yapl.l"
+#line 145 "yapl.l"
 { return '|'; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 139 "yapl.l"
+#line 146 "yapl.l"
 { return '?'; }
 	YY_BREAK
 case 80:
 /* rule 80 can match eol */
 YY_RULE_SETUP
-#line 141 "yapl.l"
+#line 148 "yapl.l"
 { /* whitespace separates tokens */ }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 142 "yapl.l"
+#line 149 "yapl.l"
 {
     sprintf(buff,"***lexing terminated*** [lexer error]: invalid character '%s'", yytext);
     yyerror(buff);
@@ -1380,7 +1381,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 147 "yapl.l"
+#line 154 "yapl.l"
 ECHO;
 	YY_BREAK
 #line 1387 "lex.yy.c"
@@ -1570,7 +1571,7 @@ static int yy_get_next_buffer (void)
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
@@ -1584,7 +1585,7 @@ static int yy_get_next_buffer (void)
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -1642,7 +1643,7 @@ static int yy_get_next_buffer (void)
 
 	if (((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		int new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
+		yy_size_t new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) yyrealloc(
 			(void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf, (yy_size_t) new_size  );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -1731,7 +1732,7 @@ static int yy_get_next_buffer (void)
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		int number_to_move = (yy_n_chars) + 2;
+		yy_size_t number_to_move = (yy_n_chars) + 2;
 		char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
 		char *source =
@@ -1782,7 +1783,7 @@ static int yy_get_next_buffer (void)
 
 		else
 			{ /* need more input */
-			int offset = (int) ((yy_c_buf_p) - (yytext_ptr));
+			yy_size_t offset = (yy_c_buf_p) - (yytext_ptr);
 			++(yy_c_buf_p);
 
 			switch ( yy_get_next_buffer(  ) )
@@ -2151,12 +2152,12 @@ YY_BUFFER_STATE yy_scan_string (const char * yystr )
  * 
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE yy_scan_bytes  (const char * yybytes, int  _yybytes_len )
+YY_BUFFER_STATE yy_scan_bytes  (const char * yybytes, yy_size_t  _yybytes_len )
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	int i;
+	yy_size_t i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = (yy_size_t) (_yybytes_len + 2);
@@ -2198,7 +2199,7 @@ static void yynoreturn yy_fatal_error (const char* msg )
 	do \
 		{ \
 		/* Undo effects of setting up yytext. */ \
-        int yyless_macro_arg = (n); \
+        yy_size_t yyless_macro_arg = (n); \
         YY_LESS_LINENO(yyless_macro_arg);\
 		yytext[yyleng] = (yy_hold_char); \
 		(yy_c_buf_p) = yytext + yyless_macro_arg; \
@@ -2238,7 +2239,7 @@ FILE *yyget_out  (void)
 /** Get the length of the current token.
  * 
  */
-int yyget_leng  (void)
+yy_size_t yyget_leng  (void)
 {
         return yyleng;
 }
@@ -2388,7 +2389,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 147 "yapl.l"
+#line 154 "yapl.l"
 
 
 int yywrap(void)        /* called at end of input */
