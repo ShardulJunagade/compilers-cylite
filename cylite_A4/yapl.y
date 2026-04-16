@@ -921,9 +921,9 @@ iteration_statement
           emit("goto", l_cond, "", "");
           emit("LABEL", l_end, "", "");
       }
-    | FOR '(' expression_statement expression_statement ')' statement
-    | FOR '(' declaration expression_statement ')' statement
-    | FOR '(' declaration expression_statement expression ')' statement
+    /* | FOR '(' expression_statement expression_statement ')' statement */
+    /* | FOR '(' declaration expression_statement ')' statement */
+    /* | FOR '(' declaration expression_statement expression ')' statement */ 
     | FOREACH '(' IDENTIFIER IN expression ')' compound_statement
     ;
 
@@ -1457,18 +1457,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (yyparse() == 0) {
-		printf("***parsing successful***\n");
-		printf("#global_declarations = %d\n",global_declarations);
-		printf("#function_definitions = %d\n",func_definitions);
-		printf("#integer_constants = %d\n",int_consts);
-		printf("#pointers_declarations = %d\n",pointer_decls);
-		printf("#ifs_without_else = %d\n",ifs_wo_else);
-		printf("if-else max-depth = %d\n",((max<0)?0:max));
-		print_reverse_derivation();
-		
-		print_quad_table(); /* Add this call here */
-	}
 
 	if (svg_file != NULL)
 	{
