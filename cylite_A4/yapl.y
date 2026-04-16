@@ -52,6 +52,9 @@ void emit(char* op, char* arg1, char* arg2, char* res) {
     int val;
 }
 
+%type <name> expression assignment_expression additive_expression multiplicative_expression 
+%type <name> unary_expression primary_expression cast_expression constant
+
 #define YYDEBUG 1
 #define YYFPRINTF yytrace_fprintf
 
@@ -128,12 +131,12 @@ static void free_derivation_steps(void);
 %%
 
 primary_expression
-	: IDENTIFIER
-	| constant
-	| string
-	| '(' expression ')'
-	| generic_selection
-	;
+    : IDENTIFIER           { strcpy($$, $1); }
+    | constant             { strcpy($$, $1); }
+    | string               { strcpy($$, $1); } 
+    | '(' expression ')'   { strcpy($$, $2); } 
+    | generic_selection    { strcpy($$, $1); } 
+    ;
 
 constant
 	: I_CONSTANT {int_consts++;}	/* includes character_constant */
@@ -181,22 +184,59 @@ postfix_expression
 
 
 unary_expression
-	: postfix_expression
+	: postfix_expression { strcpy($$, $1); }
 	| INC_OP unary_expression
+	{
+		char* t = new_temp();
+		emit("+", $2, "1", t);   /* Increment the value */
+		emit("=", t, "", $2);    /* Update the original variable */
+		strcpy($$, $2);          /* Return the updated variable name */
+	}
 	| DEC_OP unary_expression
+	{
+		char* t = new_temp();
+		emit("-", $2, "1", t);   /* Decrement the value */
+		emit("=", t, "", $2);    /* Update the original variable */
+		strcpy($$, $2);
+	}
 	| unary_operator cast_expression
+	{
+		char* t = new_temp();
+		/* The PDF example explicitly uses "minus" for unary negation  */
+		if (strcmp($1, "-") == 0) {
+			emit("minus", $2, "", t);
+		} else {
+			emit($1, $2, "", t);
+		}
+		strcpy($$, t);
+	}
 	| SIZEOF unary_expression
+	{
+		char* t = new_temp();
+		emit("sizeof", $2, "", t);
+		strcpy($$, t);
+	}
 	| SIZEOF '(' type_name ')'
+	{
+		char* t = new_temp();
+		emit("sizeof", $3, "", t);
+		strcpy($$, t);
+	}
 	| ALIGNOF '(' type_name ')'
+	{
+		char* t = new_temp();
+		emit("alignof", $3, "", t);
+		strcpy($$, t);
+	}
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
+	: '&' { strcpy($$, "&"); }
+	| '*' { strcpy($$, "*"); }
+	| '+' { strcpy($$, "+"); }
+	| '-' { strcpy($$, "-"); }
+	| '~' { strcpy($$, "~"); }
+	| '!' { strcpy($$, "!"); }
 	;
 
 cast_expression
@@ -205,17 +245,48 @@ cast_expression
 	;
 
 multiplicative_expression
-	: cast_expression
-	| multiplicative_expression '*' cast_expression
-	| multiplicative_expression '/' cast_expression
-	| multiplicative_expression '%' cast_expression
-	;
+    : cast_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | multiplicative_expression '*' cast_expression
+    {
+        char* t = new_temp();      /* Create t1, t2, etc.  */
+        emit("*", $1, $3, t);     /* op: *, arg1: left, arg2: right, result: temp [cite: 34] */
+        strcpy($$, t);            /* Pass result name up the tree  */
+    }
+    | multiplicative_expression '/' cast_expression
+    {
+        char* t = new_temp();
+        emit("/", $1, $3, t);     /* Emit row for division [cite: 53] */
+        strcpy($$, t);
+    }
+    | multiplicative_expression '%' cast_expression
+    {
+        char* t = new_temp();
+        emit("%", $1, $3, t);     /* Emit row for modulo [cite: 53] */
+        strcpy($$, t);
+    }
+    ;
 
 additive_expression
-	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression
-	| additive_expression '-' multiplicative_expression
-	;
+    : multiplicative_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | additive_expression '+' multiplicative_expression
+    {
+        char* t = new_temp();      /* Generate next temporary (e.g., t5) */
+        emit("+", $1, $3, t);     /* Create quadruple: op, arg1, arg2, result */
+        strcpy($$, t);            /* Pass temporary name to parent rule */
+    }
+    | additive_expression '-' multiplicative_expression
+    {
+        char* t = new_temp();
+        emit("-", $1, $3, t);     /* Record subtraction in the table */
+        strcpy($$, t);
+    }
+    ;
 
 shift_expression
 	: additive_expression
@@ -269,23 +340,41 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
+	{ 
+		strcpy($$, $1); 
+	}
 	| unary_expression assignment_operator assignment_expression
+	{
+		if (strcmp($2, "=") == 0) {
+			/* Simple Assignment: a = t5 */
+			emit("=", $3, "", $1);
+		} else {
+			/* Compound Assignment: a += 5 becomes t6 = a + 5, a = t6 */
+			char op[3];
+			strncpy(op, $2, strlen($2)-1); /* Extract '+' from '+=' */
+			op[strlen($2)-1] = '\0';
+			
+			char* t = new_temp();
+			emit(op, $1, $3, t);   /* Generate intermediate calculation */
+			emit("=", t, "", $1);  /* Assign intermediate result back to LHS */
+		}
+		strcpy($$, $1);
+	}
 	;
 
 assignment_operator
-	: '='
-	| MUL_ASSIGN
-	| DIV_ASSIGN
-	| MOD_ASSIGN
-	| ADD_ASSIGN
-	| SUB_ASSIGN
-	| LEFT_ASSIGN
-	| RIGHT_ASSIGN
-	| AND_ASSIGN
-	| XOR_ASSIGN
-	| OR_ASSIGN
+	: '='          { strcpy($$, "="); }
+	| MUL_ASSIGN   { strcpy($$, "*="); }
+	| DIV_ASSIGN   { strcpy($$, "/="); }
+	| MOD_ASSIGN   { strcpy($$, "%="); }
+	| ADD_ASSIGN   { strcpy($$, "+="); }
+	| SUB_ASSIGN   { strcpy($$, "-="); }
+	| LEFT_ASSIGN  { strcpy($$, "<<="); }
+	| RIGHT_ASSIGN { strcpy($$, ">>="); }
+	| AND_ASSIGN   { strcpy($$, "&="); }
+	| XOR_ASSIGN   { strcpy($$, "^="); }
+	| OR_ASSIGN    { strcpy($$, "|="); }
 	;
-
 
 expression
 	: assignment_expression
@@ -1058,6 +1147,17 @@ void yyerror(const char *s)
 	exit(-1);
 }
 
+void print_quad_table() {
+    printf("\n--- Generated Intermediate Code (Quadruples) ---\n");
+    printf("%-10s | %-10s | %-10s | %-10s\n", "op", "arg1", "arg2", "result");
+    printf("------------------------------------------------------------\n");
+    for(int i = 0; i < quad_idx; i++) {
+        printf("%-10s | %-10s | %-10s | %-10s\n", 
+               quad_table[i].op, quad_table[i].arg1, 
+               quad_table[i].arg2, quad_table[i].result);
+    }
+}
+
 int main(int argc, char **argv)
 {
     extern FILE *yyin;
@@ -1118,22 +1218,51 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		do
-		{
-			yydebug = 1;
-			yyparse();
+		/* 1. Explicitly show the Input Source Program  */
+		char line[1024];
+		printf("\n--- Input Source Program ---\n");
+		while (fgets(line, sizeof(line), yyin)) {
+			printf("%s", line);
 		}
-		while(!feof(yyin));
+		printf("\n----------------------------\n");
+		
+		/* 2. Reset file pointer so the parser can read it from the start */
+		rewind(yyin);
+
+		/* 3. Execute the Parser */
+		yydebug = 1;
+		if (yyparse() == 0) 
+		{
+			/* 4. Explicitly show the Generated Intermediate Code (Quadruples)  */
+			printf("\n*** Parsing Successful ***\n");
+			
+			/* Standard diagnostics from Lab 3 */
+			printf("#global_declarations = %d\n", global_declarations);
+			printf("#function_definitions = %d\n", func_definitions);
+			printf("#integer_constants = %d\n", int_consts);
+			printf("#pointers_declarations = %d\n", pointer_decls);
+			printf("#ifs_without_else = %d\n", ifs_wo_else);
+			printf("if-else max-depth = %d\n", ((max < 0) ? 0 : max));
+			
+			/* Call your tabular output function [cite: 50, 53] */
+			print_quad_table(); 
+			
+			print_reverse_derivation();
+		}
 	}
 
-	printf("***parsing successful***\n");
-	printf("#global_declarations = %d\n",global_declarations);
-	printf("#function_definitions = %d\n",func_definitions);
-	printf("#integer_constants = %d\n",int_consts);
-	printf("#pointers_declarations = %d\n",pointer_decls);
-	printf("#ifs_without_else = %d\n",ifs_wo_else);
-	printf("if-else max-depth = %d\n",((max<0)?0:max));
-	print_reverse_derivation();
+	if (yyparse() == 0) {
+		printf("***parsing successful***\n");
+		printf("#global_declarations = %d\n",global_declarations);
+		printf("#function_definitions = %d\n",func_definitions);
+		printf("#integer_constants = %d\n",int_consts);
+		printf("#pointers_declarations = %d\n",pointer_decls);
+		printf("#ifs_without_else = %d\n",ifs_wo_else);
+		printf("if-else max-depth = %d\n",((max<0)?0:max));
+		print_reverse_derivation();
+		
+		print_quad_table(); /* Add this call here */
+	}
 
 	if (svg_file != NULL)
 	{
