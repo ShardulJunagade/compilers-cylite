@@ -20,6 +20,38 @@ int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
 
+struct quadruple {
+    char op[10];
+    char arg1[50];
+    char arg2[50];
+    char result[50];
+};
+
+struct quadruple quad_table[1000];
+int quad_idx = 0;
+int temp_count = 0;
+
+/* Generates t1, t2, t3... */
+char* new_temp() {
+    char* t = (char*)malloc(10);
+    sprintf(t, "t%d", ++temp_count);
+    return t;
+}
+
+/* Records a new row in our table */
+void emit(char* op, char* arg1, char* arg2, char* res) {
+    strcpy(quad_table[quad_idx].op, op);
+    strcpy(quad_table[quad_idx].arg1, arg1);
+    strcpy(quad_table[quad_idx].arg2, arg2);
+    strcpy(quad_table[quad_idx].result, res);
+    quad_idx++;
+}
+
+%union {
+    char name[50];  /* Holds variable names or temp names like 't1' */
+    int val;
+}
+
 #define YYDEBUG 1
 #define YYFPRINTF yytrace_fprintf
 
