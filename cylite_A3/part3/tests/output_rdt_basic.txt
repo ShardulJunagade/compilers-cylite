@@ -21,10 +21,7 @@ Reverse derivation (top-down)
 11. conditional_expression -> logical_or_expression
 12. logical_or_expression -> logical_and_expression
 13. logical_and_expression -> inclusive_or_expression
-14. inclusive_or_ex
-
-
-pression -> exclusive_or_expression
+14. inclusive_or_expression -> exclusive_or_expression
 15. exclusive_or_expression -> and_expression
 16. and_expression -> equality_expression
 17. equality_expression -> relational_expression
@@ -100,4 +97,4 @@ pression -> exclusive_or_expression
 87. direct_declarator -> IDENTIFIER
 88. declaration_specifiers -> type_specifier
 89. type_specifier -> INT
-Failed to write SVG file: part3/tests/rdt_basic.svg
+Reverse derivation SVG written to part3/tests/rdt_basic.svg

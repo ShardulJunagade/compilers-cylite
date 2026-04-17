@@ -133,4 +133,4 @@ Reverse derivation (top-down)
 123. direct_declarator -> IDENTIFIER
 124. declaration_specifiers -> type_specifier
 125. type_specifier -> INT
-Failed to write SVG file: part3/tests/rdt_print_strings.svg
+Reverse derivation SVG written to part3/tests/rdt_print_strings.svg
