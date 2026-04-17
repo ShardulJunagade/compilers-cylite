@@ -1,0 +1,136 @@
+***parsing successful***
+#global_declarations = 1
+#function_definitions = 1
+#integer_constants = 1
+#pointers_declarations = 0
+#ifs_without_else = 0
+if-else max-depth = 0
+
+Reverse derivation (top-down)
+================================
+1. translation_unit -> external_declaration
+2. external_declaration -> function_definition
+3. function_definition -> declaration_specifiers declarator compound_statement
+4. compound_statement -> '{' block_item_list '}'
+5. block_item_list -> block_item_list block_item
+6. block_item -> statement
+7. statement -> jump_statement
+8. jump_statement -> RETURN expression ';'
+9. expression -> assignment_expression
+10. assignment_expression -> conditional_expression
+11. conditional_expression -> logical_or_expression
+12. logical_or_expression -> logical_and_expression
+13. logical_and_expression -> inclusive_or_expression
+14. inclusive_or_expression -> exclusive_or_expression
+15. exclusive_or_expression -> and_expression
+16. and_expression -> equality_expression
+17. equality_expression -> relational_expression
+18. relational_expression -> shift_expression
+19. shift_expression -> additive_expression
+20. additive_expression -> multiplicative_expression
+21. multiplicative_expression -> cast_expression
+22. cast_expression -> unary_expression
+23. unary_expression -> postfix_expression
+24. postfix_expression -> primary_expression
+25. primary_expression -> constant
+26. constant -> I_CONSTANT
+27. block_item_list -> block_item_list block_item
+28. block_item -> statement
+29. statement -> expression_statement
+30. expression_statement -> expression ';'
+31. expression -> assignment_expression
+32. assignment_expression -> conditional_expression
+33. conditional_expression -> logical_or_expression
+34. logical_or_expression -> logical_and_expression
+35. logical_and_expression -> inclusive_or_expression
+36. inclusive_or_expression -> exclusive_or_expression
+37. exclusive_or_expression -> and_expression
+38. and_expression -> equality_expression
+39. equality_expression -> relational_expression
+40. relational_expression -> shift_expression
+41. shift_expression -> additive_expression
+42. additive_expression -> multiplicative_expression
+43. multiplicative_expression -> cast_expression
+44. cast_expression -> unary_expression
+45. unary_expression -> postfix_expression
+46. postfix_expression -> PRINT '(' expression ')'
+47. expression -> expression ',' assignment_expression
+48. assignment_expression -> conditional_expression
+49. conditional_expression -> logical_or_expression
+50. logical_or_expression -> logical_and_expression
+51. logical_and_expression -> inclusive_or_expression
+52. inclusive_or_expression -> exclusive_or_expression
+53. exclusive_or_expression -> and_expression
+54. and_expression -> equality_expression
+55. equality_expression -> relational_expression
+56. relational_expression -> shift_expression
+57. shift_expression -> additive_expression
+58. additive_expression -> multiplicative_expression
+59. multiplicative_expression -> cast_expression
+60. cast_expression -> unary_expression
+61. unary_expression -> postfix_expression
+62. postfix_expression -> primary_expression
+63. primary_expression -> string
+64. string -> STRING_LITERAL
+65. expression -> assignment_expression
+66. assignment_expression -> conditional_expression
+67. conditional_expression -> logical_or_expression
+68. logical_or_expression -> logical_and_expression
+69. logical_and_expression -> inclusive_or_expression
+70. inclusive_or_expression -> exclusive_or_expression
+71. exclusive_or_expression -> and_expression
+72. and_expression -> equality_expression
+73. equality_expression -> relational_expression
+74. relational_expression -> shift_expression
+75. shift_expression -> additive_expression
+76. additive_expression -> multiplicative_expression
+77. multiplicative_expression -> cast_expression
+78. cast_expression -> unary_expression
+79. unary_expression -> postfix_expression
+80. postfix_expression -> primary_expression
+81. primary_expression -> string
+82. string -> STRING_LITERAL
+83. block_item_list -> block_item
+84. block_item -> statement
+85. statement -> expression_statement
+86. expression_statement -> expression ';'
+87. expression -> assignment_expression
+88. assignment_expression -> conditional_expression
+89. conditional_expression -> logical_or_expression
+90. logical_or_expression -> logical_and_expression
+91. logical_and_expression -> inclusive_or_expression
+92. inclusive_or_expression -> exclusive_or_expression
+93. exclusive_or_expression -> and_expression
+94. and_expression -> equality_expression
+95. equality_expression -> relational_expression
+96. relational_expression -> shift_expression
+97. shift_expression -> additive_expression
+98. additive_expression -> multiplicative_expression
+99. multiplicative_expression -> cast_expression
+100. cast_expression -> unary_expression
+101. unary_expression -> postfix_expression
+102. postfix_expression -> PRINT '(' expression ')'
+103. expression -> assignment_expression
+104. assignment_expression -> conditional_expression
+105. conditional_expression -> logical_or_expression
+106. logical_or_expression -> logical_and_expression
+107. logical_and_expression -> inclusive_or_expression
+108. inclusive_or_expression -> exclusive_or_expression
+109. exclusive_or_expression -> and_expression
+110. and_expression -> equality_expression
+111. equality_expression -> relational_expression
+112. relational_expression -> shift_expression
+113. shift_expression -> additive_expression
+114. additive_expression -> multiplicative_expression
+115. multiplicative_expression -> cast_expression
+116. cast_expression -> unary_expression
+117. unary_expression -> postfix_expression
+118. postfix_expression -> primary_expression
+119. primary_expression -> string
+120. string -> STRING_LITERAL
+121. declarator -> direct_declarator
+122. direct_declarator -> direct_declarator '(' ')'
+123. direct_declarator -> IDENTIFIER
+124. declaration_specifiers -> type_specifier
+125. type_specifier -> INT
+Reverse derivation SVG written to part3/tests/rdt_print_strings.svg

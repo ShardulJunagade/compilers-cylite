@@ -1,0 +1,19 @@
+# edit yapl.l (make your changes)
+# regenerate parser/header first (so lexer can include header)
+bison -d yapl.y
+# generate lexer C
+flex yapl.l
+# if your build expects y.tab.h, copy bison output header
+cp yapl.tab.h y.tab.h
+# compile
+gcc -O3 lex.yy.c yapl.tab.c -o yapl
+
+# run single testcase
+./yapl testcases/testcase_1.c
+
+# run all tests and compare outputs
+for i in {1..14}; do
+  ./yapl testcases/testcase_${i}.c > actual_${i}.txt 2>&1 || true
+  echo \"=== test $i ===\"
+  diff -u testcases/output_${i}.txt actual_${i}.txt || echo \"DIFF for test $i\"
+done

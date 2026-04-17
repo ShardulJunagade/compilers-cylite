@@ -1,0 +1,7 @@
+int main() {
+    int i;
+    for (i range(0, 3)) {
+        pass;
+    }
+    return 0;
+}
