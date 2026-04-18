@@ -87,11 +87,18 @@ int yytok_col = 1;
 "while"					{ return(WHILE); }
 
 
-{L}{A}*					{ return check_type(); }
+{L}{A}* { 
+    strcpy(yylval.name, yytext);
+    return check_type(); 
+}
 
-{HP}{H}+{IS}?				{ return I_CONSTANT; }
-{NZ}{D}*{IS}?				{ return I_CONSTANT; }
-"0"{O}*{IS}?				{ return I_CONSTANT; }
+{HP}{H}+{IS}? |
+{NZ}{D}*{IS}? |
+"0"{O}*{IS}? { 
+    strcpy(yylval.name, yytext); /* Copy "5" or "10" to the parser */
+    return I_CONSTANT; 
+}
+
 {CP}?"'"([^'\\\n]|{ES})+"'"		{ return I_CONSTANT; }
 
 {D}+{E}{FS}?				{ return F_CONSTANT; }

@@ -1,2 +1,0 @@
-_Atomic(int) pointer_to_atomic;
-_Atomic int simple_atomic;

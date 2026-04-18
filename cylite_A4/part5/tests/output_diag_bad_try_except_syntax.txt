@@ -1,3 +1,0 @@
-***parsing terminated*** [syntax error]
-line 5, column 9: unexpected token "pass"
-expected: '{'

@@ -1,8 +1,0 @@
-int main() {
-    try {
-        pass;
-    } except
-        pass;
-
-    return 0;
-}

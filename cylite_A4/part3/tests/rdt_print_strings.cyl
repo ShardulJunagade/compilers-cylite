@@ -1,5 +1,0 @@
-int main() {
-    print("hello");
-    print("a", "b");
-    return 0;
-}

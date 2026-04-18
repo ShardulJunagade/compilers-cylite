@@ -1,0 +1,215 @@
+
+--- Input Source Program ---
+int main() {
+    int x; int y; int max;
+    x = 15;
+    y = 8;
+    if (x > y) {
+        max = x;
+    } else {
+        max = y;
+    }
+}
+
+----------------------------
+
+*** Parsing Successful ***
+#global_declarations = 1
+#function_definitions = 1
+#integer_constants = 2
+#pointers_declarations = 0
+#ifs_without_else = 0
+if-else max-depth = 1
+
+--- Generated Intermediate Code (Quadruples) ---
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+x=15               | =          | 15         |            | x         
+y=8                | =          | 8          |            | y         
+t1=x>y             | >          | x          | y          | t1        
+ifFalse t1 goto L1 | ifFalse    | t1         |            | L1        
+max=x              | =          | x          |            | max       
+goto L2            | goto       |            |            | L2        
+LABEL L1           | LABEL      |            |            | L1        
+max=y              | =          | y          |            | max       
+LABEL L2           | LABEL      |            |            | L2        
+
+Reverse derivation (top-down)
+================================
+1. translation_unit -> external_declaration
+2. external_declaration -> function_definition
+3. function_definition -> declaration_specifiers declarator compound_statement
+4. compound_statement -> '{' block_item_list '}'
+5. block_item_list -> block_item_list block_item
+6. block_item -> statement
+7. statement -> selection_statement
+8. selection_statement -> if_prefix statement ELSE @1 statement
+9. statement -> compound_statement
+10. compound_statement -> '{' block_item_list '}'
+11. block_item_list -> block_item
+12. block_item -> statement
+13. statement -> expression_statement
+14. expression_statement -> expression ';'
+15. expression -> assignment_expression
+16. assignment_expression -> unary_expression assignment_operator assignment_expression
+17. assignment_expression -> conditional_expression
+18. conditional_expression -> logical_or_expression
+19. logical_or_expression -> logical_and_expression
+20. logical_and_expression -> inclusive_or_expression
+21. inclusive_or_expression -> exclusive_or_expression
+22. exclusive_or_expression -> and_expression
+23. and_expression -> equality_expression
+24. equality_expression -> relational_expression
+25. relational_expression -> shift_expression
+26. shift_expression -> additive_expression
+27. additive_expression -> multiplicative_expression
+28. multiplicative_expression -> cast_expression
+29. cast_expression -> unary_expression
+30. unary_expression -> postfix_expression
+31. postfix_expression -> primary_expression
+32. primary_expression -> IDENTIFIER
+33. assignment_operator -> '='
+34. unary_expression -> postfix_expression
+35. postfix_expression -> primary_expression
+36. primary_expression -> IDENTIFIER
+37. @1 -> epsilon
+38. statement -> compound_statement
+39. compound_statement -> '{' block_item_list '}'
+40. block_item_list -> block_item
+41. block_item -> statement
+42. statement -> expression_statement
+43. expression_statement -> expression ';'
+44. expression -> assignment_expression
+45. assignment_expression -> unary_expression assignment_operator assignment_expression
+46. assignment_expression -> conditional_expression
+47. conditional_expression -> logical_or_expression
+48. logical_or_expression -> logical_and_expression
+49. logical_and_expression -> inclusive_or_expression
+50. inclusive_or_expression -> exclusive_or_expression
+51. exclusive_or_expression -> and_expression
+52. and_expression -> equality_expression
+53. equality_expression -> relational_expression
+54. relational_expression -> shift_expression
+55. shift_expression -> additive_expression
+56. additive_expression -> multiplicative_expression
+57. multiplicative_expression -> cast_expression
+58. cast_expression -> unary_expression
+59. unary_expression -> postfix_expression
+60. postfix_expression -> primary_expression
+61. primary_expression -> IDENTIFIER
+62. assignment_operator -> '='
+63. unary_expression -> postfix_expression
+64. postfix_expression -> primary_expression
+65. primary_expression -> IDENTIFIER
+66. if_prefix -> IF '(' expression ')'
+67. expression -> assignment_expression
+68. assignment_expression -> conditional_expression
+69. conditional_expression -> logical_or_expression
+70. logical_or_expression -> logical_and_expression
+71. logical_and_expression -> inclusive_or_expression
+72. inclusive_or_expression -> exclusive_or_expression
+73. exclusive_or_expression -> and_expression
+74. and_expression -> equality_expression
+75. equality_expression -> relational_expression
+76. relational_expression -> relational_expression '>' shift_expression
+77. shift_expression -> additive_expression
+78. additive_expression -> multiplicative_expression
+79. multiplicative_expression -> cast_expression
+80. cast_expression -> unary_expression
+81. unary_expression -> postfix_expression
+82. postfix_expression -> primary_expression
+83. primary_expression -> IDENTIFIER
+84. relational_expression -> shift_expression
+85. shift_expression -> additive_expression
+86. additive_expression -> multiplicative_expression
+87. multiplicative_expression -> cast_expression
+88. cast_expression -> unary_expression
+89. unary_expression -> postfix_expression
+90. postfix_expression -> primary_expression
+91. primary_expression -> IDENTIFIER
+92. block_item_list -> block_item_list block_item
+93. block_item -> statement
+94. statement -> expression_statement
+95. expression_statement -> expression ';'
+96. expression -> assignment_expression
+97. assignment_expression -> unary_expression assignment_operator assignment_expression
+98. assignment_expression -> conditional_expression
+99. conditional_expression -> logical_or_expression
+100. logical_or_expression -> logical_and_expression
+101. logical_and_expression -> inclusive_or_expression
+102. inclusive_or_expression -> exclusive_or_expression
+103. exclusive_or_expression -> and_expression
+104. and_expression -> equality_expression
+105. equality_expression -> relational_expression
+106. relational_expression -> shift_expression
+107. shift_expression -> additive_expression
+108. additive_expression -> multiplicative_expression
+109. multiplicative_expression -> cast_expression
+110. cast_expression -> unary_expression
+111. unary_expression -> postfix_expression
+112. postfix_expression -> primary_expression
+113. primary_expression -> constant
+114. constant -> I_CONSTANT
+115. assignment_operator -> '='
+116. unary_expression -> postfix_expression
+117. postfix_expression -> primary_expression
+118. primary_expression -> IDENTIFIER
+119. block_item_list -> block_item_list block_item
+120. block_item -> statement
+121. statement -> expression_statement
+122. expression_statement -> expression ';'
+123. expression -> assignment_expression
+124. assignment_expression -> unary_expression assignment_operator assignment_expression
+125. assignment_expression -> conditional_expression
+126. conditional_expression -> logical_or_expression
+127. logical_or_expression -> logical_and_expression
+128. logical_and_expression -> inclusive_or_expression
+129. inclusive_or_expression -> exclusive_or_expression
+130. exclusive_or_expression -> and_expression
+131. and_expression -> equality_expression
+132. equality_expression -> relational_expression
+133. relational_expression -> shift_expression
+134. shift_expression -> additive_expression
+135. additive_expression -> multiplicative_expression
+136. multiplicative_expression -> cast_expression
+137. cast_expression -> unary_expression
+138. unary_expression -> postfix_expression
+139. postfix_expression -> primary_expression
+140. primary_expression -> constant
+141. constant -> I_CONSTANT
+142. assignment_operator -> '='
+143. unary_expression -> postfix_expression
+144. postfix_expression -> primary_expression
+145. primary_expression -> IDENTIFIER
+146. block_item_list -> block_item_list block_item
+147. block_item -> declaration
+148. declaration -> declaration_specifiers init_declarator_list ';'
+149. init_declarator_list -> init_declarator
+150. init_declarator -> declarator
+151. declarator -> direct_declarator
+152. direct_declarator -> IDENTIFIER
+153. declaration_specifiers -> type_specifier
+154. type_specifier -> INT
+155. block_item_list -> block_item_list block_item
+156. block_item -> declaration
+157. declaration -> declaration_specifiers init_declarator_list ';'
+158. init_declarator_list -> init_declarator
+159. init_declarator -> declarator
+160. declarator -> direct_declarator
+161. direct_declarator -> IDENTIFIER
+162. declaration_specifiers -> type_specifier
+163. type_specifier -> INT
+164. block_item_list -> block_item
+165. block_item -> declaration
+166. declaration -> declaration_specifiers init_declarator_list ';'
+167. init_declarator_list -> init_declarator
+168. init_declarator -> declarator
+169. declarator -> direct_declarator
+170. direct_declarator -> IDENTIFIER
+171. declaration_specifiers -> type_specifier
+172. type_specifier -> INT
+173. declarator -> direct_declarator
+174. direct_declarator -> direct_declarator '(' ')'
+175. direct_declarator -> IDENTIFIER
+176. declaration_specifiers -> type_specifier
+177. type_specifier -> INT

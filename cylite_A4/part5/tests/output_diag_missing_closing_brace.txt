@@ -1,2 +1,0 @@
-***parsing terminated*** [syntax error]
-line 6, column 14: unexpected token "<end-of-input>"

@@ -19,6 +19,40 @@ int pointer_decls=0;
 int ifs_wo_else=0;
 int ladder_len=0,hold=0;
 int max=-1;
+int label_count = 0;
+
+struct quadruple {
+    char op[10];
+    char arg1[50];
+    char arg2[50];
+    char result[50];
+};
+
+struct quadruple quad_table[1000];
+int quad_idx = 0;
+int temp_count = 0;
+
+/* Generates t1, t2, t3... */
+char* new_temp() {
+    char* t = (char*)malloc(10);
+    sprintf(t, "t%d", ++temp_count);
+    return t;
+}
+
+char* new_label() {
+    char* l = (char*)malloc(10);
+    sprintf(l, "L%d", ++label_count);
+    return l;
+}
+
+/* Records a new row in our table */
+void emit(char* op, char* arg1, char* arg2, char* res) {
+    strcpy(quad_table[quad_idx].op, op);
+    strcpy(quad_table[quad_idx].arg1, arg1);
+    strcpy(quad_table[quad_idx].arg2, arg2);
+    strcpy(quad_table[quad_idx].result, res);
+    quad_idx++;
+}
 
 #define YYDEBUG 1
 #define YYFPRINTF yytrace_fprintf
@@ -54,8 +88,25 @@ static int looks_like_nonterminal(const char *sym);
 static void free_derivation_steps(void);
 %}
 
+%union {
+    char name[50];  /* Holds variable names or temp names like 't1' */
+    int val;
+    struct symtab *symp; /* Added from your second union */
+}
+
+%type <name> expression assignment_expression additive_expression multiplicative_expression 
+%type <name> unary_expression primary_expression cast_expression constant
+%type <name> postfix_expression string generic_selection
+%type <name> shift_expression relational_expression equality_expression
+%type <name> and_expression exclusive_or_expression inclusive_or_expression
+%type <name> logical_and_expression logical_or_expression conditional_expression
+%type <name> unary_operator assignment_operator expression_statement type_name
+%type <name> if_prefix while_prefix while_cond
+
+
 %token 	ELIF PASS TRY EXCEPT PRINT RANGE IN FOREACH
-%token	IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
+%token <name> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME
+%token SIZEOF
 %token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP TH_OP
 %token	AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token	SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -86,29 +137,21 @@ static void free_derivation_steps(void);
 
 %right '('
 
-
-%union
-{
-	int val;
-	struct symtab *symp;
-}
-
 %%
 
 primary_expression
-	: IDENTIFIER
-	| constant
-	| string
-	| '(' expression ')'
-	| generic_selection
-	;
+    : IDENTIFIER           { strcpy($$, $1); }
+    | constant             { strcpy($$, $1); }
+    | string               { strcpy($$, $1); } 
+    | '(' expression ')'   { strcpy($$, $2); } 
+    | generic_selection    { strcpy($$, $1); } 
+    ;
 
 constant
-	: I_CONSTANT {int_consts++;}	/* includes character_constant */
+	: I_CONSTANT {int_consts++;}	
 	| F_CONSTANT
-	| ENUMERATION_CONSTANT	/* after it has been defined as such */
+	| ENUMERATION_CONSTANT { strcpy($$, "enum_const"); } 
 	;
-
 enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER
 	;
@@ -119,7 +162,7 @@ string
 	;
 
 generic_selection
-	: GENERIC '(' assignment_expression ',' generic_assoc_list ')'
+	: GENERIC '(' assignment_expression ',' generic_assoc_list ')' { strcpy($$, ""); }
 	;
 
 generic_assoc_list
@@ -141,123 +184,283 @@ postfix_expression
 	| postfix_expression PTR_OP IDENTIFIER
 	| postfix_expression INC_OP
 	| postfix_expression DEC_OP
-	| '(' type_name ')' '{' initializer_list '}'
-	| '(' type_name ')' '{' initializer_list ',' '}'
-	| PRINT '(' ')'
-	| PRINT '(' expression ')'               /* Use expression here */
+	| '(' type_name ')' '{' initializer_list '}'      { strcpy($$, ""); }
+	| '(' type_name ')' '{' initializer_list ',' '}'  { strcpy($$, ""); }
+	| PRINT '(' ')'                                   { strcpy($$, ""); }
+	| PRINT '(' expression ')'                        { strcpy($$, ""); }
 	;
 
 
 unary_expression
-	: postfix_expression
+	: postfix_expression { strcpy($$, $1); }
 	| INC_OP unary_expression
+	{
+		char* t = new_temp();
+		emit("+", $2, "1", t);   /* Increment the value */
+		emit("=", t, "", $2);    /* Update the original variable */
+		strcpy($$, $2);          /* Return the updated variable name */
+	}
 	| DEC_OP unary_expression
+	{
+		char* t = new_temp();
+		emit("-", $2, "1", t);   /* Decrement the value */
+		emit("=", t, "", $2);    /* Update the original variable */
+		strcpy($$, $2);
+	}
 	| unary_operator cast_expression
+	{
+		char* t = new_temp();
+		/* The PDF example explicitly uses "minus" for unary negation  */
+		if (strcmp($1, "-") == 0) {
+			emit("minus", $2, "", t);
+		} else {
+			emit($1, $2, "", t);
+		}
+		strcpy($$, t);
+	}
 	| SIZEOF unary_expression
+	{
+		char* t = new_temp();
+		emit("sizeof", $2, "", t);
+		strcpy($$, t);
+	}
 	| SIZEOF '(' type_name ')'
+	{
+		char* t = new_temp();
+		emit("sizeof", $3, "", t);
+		strcpy($$, t);
+	}
 	| ALIGNOF '(' type_name ')'
+	{
+		char* t = new_temp();
+		emit("alignof", $3, "", t);
+		strcpy($$, t);
+	}
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
+	: '&' { strcpy($$, "&"); }
+	| '*' { strcpy($$, "*"); }
+	| '+' { strcpy($$, "+"); }
+	| '-' { strcpy($$, "-"); }
+	| '~' { strcpy($$, "~"); }
+	| '!' { strcpy($$, "!"); }
 	;
 
 cast_expression
-	: unary_expression
-	| '(' type_name ')' cast_expression
+	: unary_expression { strcpy($$, $1); }
+	| '(' type_name ')' cast_expression { strcpy($$, $4); } /* ADD ACTION to pass $4 up */
 	;
 
 multiplicative_expression
-	: cast_expression
-	| multiplicative_expression '*' cast_expression
-	| multiplicative_expression '/' cast_expression
-	| multiplicative_expression '%' cast_expression
-	;
+    : cast_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | multiplicative_expression '*' cast_expression
+    {
+        char* t = new_temp();      /* Create t1, t2, etc.  */
+        emit("*", $1, $3, t);     /* op: *, arg1: left, arg2: right, result: temp [cite: 34] */
+        strcpy($$, t);            /* Pass result name up the tree  */
+    }
+    | multiplicative_expression '/' cast_expression
+    {
+        char* t = new_temp();
+        emit("/", $1, $3, t);     /* Emit row for division [cite: 53] */
+        strcpy($$, t);
+    }
+    | multiplicative_expression '%' cast_expression
+    {
+        char* t = new_temp();
+        emit("%", $1, $3, t);     /* Emit row for modulo [cite: 53] */
+        strcpy($$, t);
+    }
+    ;
 
 additive_expression
-	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression
-	| additive_expression '-' multiplicative_expression
-	;
+    : multiplicative_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | additive_expression '+' multiplicative_expression
+    {
+        char* t = new_temp();      /* Generate next temporary (e.g., t5) */
+        emit("+", $1, $3, t);     /* Create quadruple: op, arg1, arg2, result */
+        strcpy($$, t);            /* Pass temporary name to parent rule */
+    }
+    | additive_expression '-' multiplicative_expression
+    {
+        char* t = new_temp();
+        emit("-", $1, $3, t);     /* Record subtraction in the table */
+        strcpy($$, t);
+    }
+    ;
 
 shift_expression
-	: additive_expression
+	: additive_expression {strcpy($$, $1); };
 	| shift_expression LEFT_OP additive_expression
 	| shift_expression RIGHT_OP additive_expression
 	;
 
 relational_expression
-	: shift_expression
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
-	| relational_expression TH_OP shift_expression
-	;
+    : shift_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | relational_expression '<' shift_expression
+    {
+        char* t = new_temp();
+        emit("<", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression '>' shift_expression
+    {
+        char* t = new_temp();
+        emit(">", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression LE_OP shift_expression
+    {
+        char* t = new_temp();
+        emit("<=", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression GE_OP shift_expression
+    {
+        char* t = new_temp();
+        emit(">=", $1, $3, t);
+        strcpy($$, t);
+    }
+    | relational_expression TH_OP shift_expression
+    {
+        char* t = new_temp();
+        emit("<=>", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 equality_expression
-	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
-	;
+    : relational_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | equality_expression EQ_OP relational_expression
+    {
+        char* t = new_temp();
+        emit("==", $1, $3, t);
+        strcpy($$, t);
+    }
+    | equality_expression NE_OP relational_expression
+    {
+        char* t = new_temp();
+        emit("!=", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 and_expression
-	: equality_expression
+	: equality_expression { strcpy($$, $1); };
 	| and_expression '&' equality_expression
 	;
 
 exclusive_or_expression
-	: and_expression
+	: and_expression { strcpy($$, $1); };
 	| exclusive_or_expression '^' and_expression
 	;
 
 inclusive_or_expression
-	: exclusive_or_expression
+	: exclusive_or_expression { strcpy($$, $1); };
 	| inclusive_or_expression '|' exclusive_or_expression
 	;
 
 logical_and_expression
-	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
-	;
+    : inclusive_or_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | logical_and_expression AND_OP inclusive_or_expression
+    {
+        char* t = new_temp();
+        emit("&&", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 logical_or_expression
-	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
-	;
+    : logical_and_expression 
+    { 
+        strcpy($$, $1); 
+    }
+    | logical_or_expression OR_OP logical_and_expression
+    {
+        char* t = new_temp();
+        emit("||", $1, $3, t);
+        strcpy($$, t);
+    }
+    ;
 
 conditional_expression
-	: logical_or_expression
+	: logical_or_expression { strcpy($$, $1); };
 	;
 
 assignment_expression
 	: conditional_expression
-	| unary_expression assignment_operator assignment_expression
+	{ 
+		strcpy($$, $1); 
+	}
+        | unary_expression assignment_operator assignment_expression
+        {
+                char target[50];
+                strcpy(target, $1);
+                
+                // VALIDATION CHECK: Eliminate unary ops on LHS
+                if (target[0] == 't' || target[0] == 'T') {
+                    for (int i = quad_idx - 1; i >= 0; i--) {
+                        if (strcmp(quad_table[i].result, target) == 0) {
+                            if (strcmp(quad_table[i].op, "minus") == 0 || strcmp(quad_table[i].op, "-") == 0 || strcmp(quad_table[i].op, "+") == 0 || strcmp(quad_table[i].op, "*") == 0 || strcmp(quad_table[i].op, "&") == 0 || strcmp(quad_table[i].op, "!") == 0 || strcmp(quad_table[i].op, "~") == 0) {
+                                strcpy(target, quad_table[i].arg1);
+                                for (int k = i; k < quad_idx - 1; k++) {
+                                    quad_table[k] = quad_table[k + 1];
+                                }
+                                quad_idx--;
+                                temp_count--; // Decrement temp to maintain sequential count
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (strcmp($2, "=") == 0) {
+                        emit("=", $3, "", target);
+                } else {
+                        char op[3];
+                        strncpy(op, $2, strlen($2)-1);
+                        op[strlen($2)-1] = '\0';
+                        char* t = new_temp();
+                        emit(op, target, $3, t);
+                        emit("=", t, "", target);
+                }
+                strcpy($$, target);
+        }
 	;
 
 assignment_operator
-	: '='
-	| MUL_ASSIGN
-	| DIV_ASSIGN
-	| MOD_ASSIGN
-	| ADD_ASSIGN
-	| SUB_ASSIGN
-	| LEFT_ASSIGN
-	| RIGHT_ASSIGN
-	| AND_ASSIGN
-	| XOR_ASSIGN
-	| OR_ASSIGN
+	: '='          { strcpy($$, "="); }
+	| MUL_ASSIGN   { strcpy($$, "*="); }
+	| DIV_ASSIGN   { strcpy($$, "/="); }
+	| MOD_ASSIGN   { strcpy($$, "%="); }
+	| ADD_ASSIGN   { strcpy($$, "+="); }
+	| SUB_ASSIGN   { strcpy($$, "-="); }
+	| LEFT_ASSIGN  { strcpy($$, "<<="); }
+	| RIGHT_ASSIGN { strcpy($$, ">>="); }
+	| AND_ASSIGN   { strcpy($$, "&="); }
+	| XOR_ASSIGN   { strcpy($$, "^="); }
+	| OR_ASSIGN    { strcpy($$, "|="); }
 	;
 
-
 expression
-	: assignment_expression
-	| expression ',' assignment_expression
+	: assignment_expression { strcpy($$, $1); }
+	| expression ',' assignment_expression { strcpy($$, $3); }
 	;
 
 constant_expression
@@ -457,8 +660,8 @@ identifier_list
 	;
 
 type_name
-	: specifier_qualifier_list abstract_declarator
-	| specifier_qualifier_list
+	: specifier_qualifier_list abstract_declarator { strcpy($$, "type"); }
+	| specifier_qualifier_list                     { strcpy($$, "type"); }
 	;
 
 abstract_declarator
@@ -559,8 +762,8 @@ block_item
 	;
 
 expression_statement
-	: ';'
-	| expression ';'
+	: ';' { strcpy($$, ""); }
+	| expression ';' { strcpy($$, $1); }
 	;
 
 elif_list
@@ -568,37 +771,178 @@ elif_list
 	| elif_list ELIF '(' expression ')' statement { ladder_len++; }
 	;
 
+if_prefix
+    : IF '(' expression ')'
+    {
+        char *l_false = new_label();
+        emit("ifFalse", $3, "", l_false);
+        strcpy($$, l_false); /* FIX: strcpy instead of = */
+    }
+    ;
+
+while_prefix
+    : WHILE
+    {
+        char *l_start = new_label();
+		emit("LABEL", "", "", l_start);
+        strcpy($$, l_start); /* FIX: strcpy */
+    }
+    ;
+
+while_cond
+    : while_prefix '(' expression ')'
+    {
+        char *l_end = new_label();
+        emit("ifFalse", $3, "", l_end);
+        sprintf($$, "%s %s", $1, l_end); /* Pack start and end labels */
+    }
+    ;
+
 selection_statement
-    : IF '(' expression ')' statement ELSE { ladder_len++; $6 = (ladder_len-1); } statement 
-        { 
-            if(ladder_len >= max) { max = ladder_len; } 
-            ladder_len = $6; 
-        }
-    | IF '(' expression ')' statement %prec LOWER_THAN_ELSE 
-        { ifs_wo_else++; }
-    | IF '(' expression ')' statement elif_list ELSE 
-        { ladder_len++; $7 = (ladder_len-1); } 
+    /* RULE 1: IF-ELSE */
+    : if_prefix statement ELSE 
+      {
+          char *l_end = new_label();
+					emit("goto", "", "", l_end);
+					emit("LABEL", "", "", $1); /* $1 is the label from if_prefix */
+          
+          ladder_len++; 
+          $<val>$ = (ladder_len - 1); 
+          strcpy($<name>$, l_end); /* FIX: strcpy */
+      }
       statement 
-        { 
-            if(ladder_len >= max) { max = ladder_len; } 
-            ladder_len = $7; 
-        }
-    | IF '(' expression ')' statement elif_list %prec LOWER_THAN_ELSE
-        { /* Logic for if-elif without final else */ }
+      {
+		  emit("LABEL", "", "", $<name>4); 
+          if(ladder_len >= max) { max = ladder_len; } 
+          ladder_len = $<val>4; 
+      }
+
+    /* RULE 2: IF ONLY */
+    | if_prefix statement %prec LOWER_THAN_ELSE 
+      {
+					emit("LABEL", "", "", $1);
+          ifs_wo_else++;
+      }
+
+    /* RULE 3: IF-ELIF-ELSE */
+    | if_prefix statement elif_list ELSE 
+      {
+          char *l_end = new_label();
+					emit("goto", "", "", l_end);
+					emit("LABEL", "", "", $1);
+          
+          ladder_len++; 
+          $<val>$ = (ladder_len - 1); 
+          strcpy($<name>$, l_end); /* FIX: strcpy */
+      } 
+      statement 
+      { 
+		  emit("LABEL", "", "", $<name>5);
+          if(ladder_len >= max) { max = ladder_len; } 
+          ladder_len = $<val>5; 
+      }
+
+    /* RULE 4: IF-ELIF (No final else) */
+    | if_prefix statement elif_list %prec LOWER_THAN_ELSE
+      { 
+					emit("LABEL", "", "", $1);
+      }
     | SWITCH '(' expression ')' statement
     ;
 
-
 iteration_statement
-	: WHILE '(' expression ')' statement
-	| DO statement WHILE '(' expression ')' ';'
-	| FOR '(' expression_statement expression_statement ')' statement
-	| FOR '(' expression_statement expression_statement expression ')' statement
-	| FOR '(' declaration expression_statement ')' statement
-	| FOR '(' declaration expression_statement expression ')' statement
-	| FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' statement
-	| FOREACH '(' IDENTIFIER IN expression ')' compound_statement
-	;
+    /* RULE 1: WHILE Loop */
+    : while_cond statement
+      {
+          char l_start[10], l_end[10];
+          sscanf($1, "%s %s", l_start, l_end); /* Unpack labels from while_cond */
+					emit("goto", "", "", l_start);
+					emit("LABEL", "", "", l_end);
+      }
+
+    /* RULE 2: DO-WHILE Loop */
+    | DO 
+      {
+          char *l_start = new_label();
+					emit("LABEL", "", "", l_start);
+          strcpy($<name>$, l_start); /* FIX: strcpy */
+      }
+      statement WHILE '(' expression ')' ';'
+      {
+          char *l_end = new_label();
+          emit("ifFalse", $6, "", l_end);
+		  emit("goto", "", "", $<name>2); 
+		  emit("LABEL", "", "", l_end);  
+      }
+
+    /* RULE 3: Standard FOR Loop */
+    | FOR '(' expression_statement 
+      {
+          char *l_cond = new_label();
+					emit("LABEL", "", "", l_cond);
+          strcpy($<name>$, l_cond); /* FIX: strcpy */
+      }
+      expression_statement 
+      {
+          char *l_body = new_label();
+          char *l_inc = new_label();
+          char *l_end = new_label();
+          
+          emit("ifFalse", $5, "", l_end); 
+		  emit("goto", "", "", l_body);
+		  emit("LABEL", "", "", l_inc);
+          sprintf($<name>$, "%s %s %s", l_body, l_inc, l_end);
+      }
+      expression 
+      {
+		  emit("goto", "", "", $<name>4); 
+          
+          char l_body[10], l_inc[10], l_end[10];
+          sscanf($<name>6, "%s %s %s", l_body, l_inc, l_end);
+          
+		  emit("LABEL", "", "", l_body);
+          sprintf($<name>$, "%s %s", l_inc, l_end); 
+      }
+      ')' statement
+      {
+          char l_inc[10], l_end[10];
+          sscanf($<name>8, "%s %s", l_inc, l_end);
+          
+		  emit("goto", "", "", l_inc);
+		  emit("LABEL", "", "", l_end);
+      }
+
+    /* RULE 4: Python-style RANGE Loop */
+    | FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' 
+      {
+          emit("=", $7, "", $3);
+          char *l_cond = new_label();
+          char *l_end = new_label();
+		  emit("LABEL", "", "", l_cond);
+          
+          char *t_cond = new_temp();
+          emit("<=", $3, $9, t_cond);
+          emit("ifFalse", t_cond, "", l_end);
+          
+          sprintf($<name>$, "%s %s %s", l_cond, l_end, $3);
+      }
+      statement
+      {
+          char l_cond[10], l_end[10], id_name[50];
+          sscanf($<name>12, "%s %s %s", l_cond, l_end, id_name);
+          
+          char *t_inc = new_temp();
+          emit("+", id_name, "1", t_inc);
+          emit("=", t_inc, "", id_name);
+          
+		  emit("goto", "", "", l_cond);
+		  emit("LABEL", "", "", l_end);
+      }
+    /* | FOR '(' expression_statement expression_statement ')' statement */
+    /* | FOR '(' declaration expression_statement ')' statement */
+    /* | FOR '(' declaration expression_statement expression ')' statement */ 
+    | FOREACH '(' IDENTIFIER IN expression ')' compound_statement
+    ;
 
 jump_statement
 	: GOTO IDENTIFIER ';'
@@ -1026,6 +1370,55 @@ void yyerror(const char *s)
 	exit(-1);
 }
 
+static void format_quad_statement(const struct quadruple *q, char *out, size_t out_sz)
+{
+	if (strcmp(q->op, "=") == 0)
+	{
+		snprintf(out, out_sz, "%s=%s", q->result, q->arg1);
+	}
+	else if (strcmp(q->op, "minus") == 0)
+	{
+		snprintf(out, out_sz, "%s=minus %s", q->result, q->arg1);
+	}
+	else if (strcmp(q->op, "ifFalse") == 0)
+	{
+		snprintf(out, out_sz, "ifFalse %s goto %s", q->arg1, q->result);
+	}
+	else if (strcmp(q->op, "goto") == 0)
+	{
+		const char *target = (q->result[0] != '\0') ? q->result : q->arg1;
+		snprintf(out, out_sz, "goto %s", target);
+	}
+	else if (strcmp(q->op, "LABEL") == 0)
+	{
+		const char *target = (q->result[0] != '\0') ? q->result : q->arg1;
+		snprintf(out, out_sz, "LABEL %s", target);
+	}
+	else if (q->arg2[0] != '\0')
+	{
+		snprintf(out, out_sz, "%s=%s%s%s", q->result, q->arg1, q->op, q->arg2);
+	}
+	else
+	{
+		snprintf(out, out_sz, "%s=%s %s", q->result, q->op, q->arg1);
+	}
+}
+
+void print_quad_table() {
+	char stmt[128];
+
+    printf("\n--- Generated Intermediate Code (Quadruples) ---\n");
+	printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", "statement", "op", "arg1", "arg2", "result");
+	printf("--------------------------------------------------------------------------------\n");
+    for(int i = 0; i < quad_idx; i++) {
+		format_quad_statement(&quad_table[i], stmt, sizeof(stmt));
+		printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", 
+			   stmt,
+               quad_table[i].op, quad_table[i].arg1, 
+               quad_table[i].arg2, quad_table[i].result);
+    }
+}
+
 int main(int argc, char **argv)
 {
     extern FILE *yyin;
@@ -1086,22 +1479,39 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		do
-		{
-			yydebug = 1;
-			yyparse();
+		/* 1. Explicitly show the Input Source Program  */
+		char line[1024];
+		printf("\n--- Input Source Program ---\n");
+		while (fgets(line, sizeof(line), yyin)) {
+			printf("%s", line);
 		}
-		while(!feof(yyin));
+		printf("\n----------------------------\n");
+		
+		/* 2. Reset file pointer so the parser can read it from the start */
+		rewind(yyin);
+
+		/* 3. Execute the Parser */
+		yydebug = 1;
+		if (yyparse() == 0) 
+		{
+			/* 4. Explicitly show the Generated Intermediate Code (Quadruples)  */
+			printf("\n*** Parsing Successful ***\n");
+			
+			/* Standard diagnostics from Lab 3 */
+			printf("#global_declarations = %d\n", global_declarations);
+			printf("#function_definitions = %d\n", func_definitions);
+			printf("#integer_constants = %d\n", int_consts);
+			printf("#pointers_declarations = %d\n", pointer_decls);
+			printf("#ifs_without_else = %d\n", ifs_wo_else);
+			printf("if-else max-depth = %d\n", ((max < 0) ? 0 : max));
+			
+			/* Call your tabular output function [cite: 50, 53] */
+			print_quad_table(); 
+			
+			print_reverse_derivation();
+		}
 	}
 
-	printf("***parsing successful***\n");
-	printf("#global_declarations = %d\n",global_declarations);
-	printf("#function_definitions = %d\n",func_definitions);
-	printf("#integer_constants = %d\n",int_consts);
-	printf("#pointers_declarations = %d\n",pointer_decls);
-	printf("#ifs_without_else = %d\n",ifs_wo_else);
-	printf("if-else max-depth = %d\n",((max<0)?0:max));
-	print_reverse_derivation();
 
 	if (svg_file != NULL)
 	{
