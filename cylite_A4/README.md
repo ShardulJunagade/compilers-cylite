@@ -1,40 +1,38 @@
-# CYLite Assignment 3
+# CYLite Assignment 4
 
-Main submission document: [A3_report.pdf](./A3_report.pdf)
+Main submission document: [report_A4.pdf](./report/report_A4.pdf)
 
-LALR(1) parser construction, conflict analysis and resolution, reverse derivation output, parsing table generation, and syntax diagnostics for the CYLite language (YAPL extension).
+Assignment 4 extends CYLite from syntax validation to syntax-directed translation by generating intermediate code in Three Address Code (TAC) quadruple form.
 
 ## Project Scope
 
-This repository version covers Assignment 3 objectives:
+This repository version covers Assignment 4 objectives:
 
-1. Build the LALR(1) automaton from the CYLite grammar.
-2. Identify shift/reduce and reduce/reduce conflicts.
-3. Resolve conflicts with grammar and precedence changes.
-4. Demonstrate before/after behavior on focused test cases.
-5. Print reverse derivation after successful parse.
-6. Generate parsing table output in matrix/tabular form.
-7. Provide meaningful syntax error diagnostics.
+1. Build TAC generation into the parser using semantic actions.
+2. Represent intermediate code as quadruples (op, arg1, arg2, result).
+3. Generate TAC for arithmetic and logical expressions.
+4. Generate TAC for assignments and compound assignments.
+5. Lower control flow (if/elif/else, loops) into labels and jumps.
+6. Print row-wise, readable intermediate code output.
+7. Preserve meaningful syntax diagnostics and robust error handling.
 
-## Implemented Language Extensions
+## Core Assignment 4 Additions
 
-CYLite extends the baseline YAPL grammar with the following features:
+- Quadruple table and helper APIs for IR emission.
+- Temporary variable generation (t1, t2, ...).
+- Label generation for control-flow lowering (L1, L2, ...).
+- Expression-level semantic value propagation across grammar rules.
+- Assignment destination safety checks to preserve valid LHS stores.
+- Structured printing of generated TAC after parsing.
 
-- `elif` chains integrated into selection statements.
-- `pass` as an explicit no-op statement.
-- `try-except` block syntax.
-- `print(...)` built-in parsing support.
-- `foreach (id in expr)` loop form.
-- `for (id in range(a, b))` loop form.
+## Repository Structure (Assignment 4)
 
-## Repository Structure (Assignment 3)
-
-- `yapl.y`: Bison grammar with conflict-resolution updates and parser actions.
-- `yapl.l`: Flex lexer with tokenization and position tracking for diagnostics.
-- `part3/tests/`: Reverse-derivation tests and output artifacts.
-- `part4/`: Parsing-table generator script and generated matrix artifacts.
-- `part5/tests/`: Invalid inputs and captured syntax-diagnostic outputs.
-- `report/report.tex`: Full technical report for Parts 1-6.
+- `yapl.y`: Bison grammar with semantic actions for TAC generation.
+- `yapl.l`: Flex lexer with token/lexeme propagation to parser semantic values.
+- `testcases_a4/`: Assignment 4 focused testcases and generated outputs.
+- `report/report_A4.tex`: Full technical report for Assignment 4.
+- `report/report_A4.pdf`: Compiled Assignment 4 report.
+- `additions.txt`: Quick summary of A4 token/grammar additions.
 
 ## Prerequisites
 
@@ -42,8 +40,6 @@ CYLite extends the baseline YAPL grammar with the following features:
 - `bison`
 - `flex` (or `lex`)
 - `gcc`
-- `python3`
-- `graphviz` (only required for SVG output in Part 3)
 
 Quick checks:
 
@@ -51,8 +47,6 @@ Quick checks:
 bison --version
 flex --version
 gcc --version
-python3 --version
-dot -V
 ```
 
 ## Build
@@ -60,7 +54,7 @@ dot -V
 From repository root:
 
 ```bash
-cd cylite_A3
+cd cylite_A4
 make clean
 make
 ```
@@ -71,115 +65,74 @@ Build outputs include:
 - `lex.yy.c`
 - executable `yapl`
 
-## Assignment Workflow
+## Usage
 
-### Part 1 and Part 2: Automaton + Conflict Resolution
-
-Generate verbose automaton and parser report:
+Run on a single testcase:
 
 ```bash
-bison -v -d yapl.y
+./yapl testcases_a4/tc1.c
 ```
 
-Inspect conflicts:
+Run all Assignment 4 testcase inputs:
 
 ```bash
-grep -n "conflict" yapl.output
+for i in {1..10}; do
+	./yapl testcases_a4/tc${i}.c > testcases_a4/tc${i}.txt 2>&1 || true
+done
 ```
 
-Use `yapl.output` to document:
+## Output Format
 
-- conflict states
-- conflict type (shift/reduce or reduce/reduce)
-- exact productions involved
+Generated IR is printed as a TAC table with columns:
 
-### Part 3: Reverse Derivation Tree
+- `statement`
+- `op`
+- `arg1`
+- `arg2`
+- `result`
 
-Run parser-focused tests:
+Typical rows include:
+
+- expression rows like `t1=b*5`
+- assignment rows like `c=t2`
+- control-flow rows like `ifFalse t1 goto L1`, `goto L2`, `LABEL L1`
+
+## Error Handling (Assignment 4)
+
+The parser reports syntax failures with useful location-aware diagnostics and exits cleanly on invalid programs.
+
+Example invalid run:
 
 ```bash
-./yapl part3/tests/rdt_basic.cyl
-./yapl part3/tests/rdt_extensions.cyl
-./yapl part3/tests/rdt_print_strings.cyl
+./yapl test_error.c
 ```
 
-Generate SVG visualization (optional):
+Expected behavior:
+
+- parsing terminated message
+- line/column location
+- unexpected token information
+
+## Build and Reproduction Steps
 
 ```bash
-./yapl part3/tests/rdt_extensions.cyl --svg part3/tests/rdt_extensions.svg
+cd cylite_A4
+make clean
+make
+./yapl testcases_a4/tc1.c
 ```
-
-This produces:
-
-- terminal reverse derivation output
-- SVG file at the provided path
-- intermediate DOT file at `<svg_path>.dot`
-
-Assignment target:
-
-```bash
-make part3
-```
-
-### Part 4: Parsing Table Matrix Output
-
-Generate ACTION/GOTO tables and matrix view:
-
-```bash
-make part4
-```
-
-Equivalent manual steps:
-
-```bash
-bison -v -d yapl.y
-python3 part4/generate_parsing_table.py yapl.output part4
-```
-
-Generated artifacts:
-
-- `part4/action_table.csv`
-- `part4/goto_table.csv`
-- `part4/parsing_table_summary.md`
-- `part4/parsing_table_matrix.html`
-
-Deployed matrix view:
-
-- https://sharduljunagade.github.io/compilers-cylite/cylite_A3/part4/parsing_table_matrix.html
-
-### Part 5: Error Diagnostics
-
-Run diagnostics suite on intentionally invalid programs:
-
-```bash
-make part5
-```
-
-Diagnostics include:
-
-- line and column of failure
-- unexpected token
-- expected tokens (when available from Bison verbose errors)
-
-Outputs are saved as:
-
-- `part5/tests/output_diag_*.txt`
-
 
 ## Validation Inputs
 
-Recommended parser validation set:
+Recommended Assignment 4 validation set:
 
-- `part3/tests/rdt_basic.cyl`
-- `part3/tests/rdt_extensions.cyl`
-- `part3/tests/rdt_print_strings.cyl`
+- `testcases_a4/tc1.c` to `testcases_a4/tc10.c`
+- `testcases_a4/expr_test.c`
+- `testcases_a4/structured_test.c`
+- `testcases_a4/while_test.c`
+- `testcases_a4/test1.c`
 
-Recommended diagnostic validation set:
+## Notes
 
-- `part5/tests/diag_missing_semicolon.cyl`
-- `part5/tests/diag_unexpected_else.cyl`
-- `part5/tests/diag_missing_semicolon_after_print.cyl`
-- `part5/tests/diag_missing_closing_brace.cyl`
-- `part5/tests/diag_bad_for_range_syntax.cyl`
-- `part5/tests/diag_bad_try_except_syntax.cyl`
-- `part5/tests/diag_invalid_character.cyl`
+- `make part3`, `make part4`, and `make part5` targets are retained from earlier workflow setup and can still be used for parser-table/diagnostic experiments.
+- Assignment 4 evaluation should focus on TAC generation behavior shown by `./yapl` output on `testcases_a4` inputs.
