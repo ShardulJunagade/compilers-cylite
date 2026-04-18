@@ -22,17 +22,17 @@ int main() {
 if-else max-depth = 1
 
 --- Generated Intermediate Code (Quadruples) ---
-op         | arg1       | arg2       | result    
-------------------------------------------------------------
-=          | 15         |            | x         
-=          | 8          |            | y         
->          | x          | y          | t1        
-ifFalse    | t1         |            | L1        
-=          | x          |            | max       
-goto       | L2         |            |           
-LABEL      | L1         |            |           
-=          | y          |            | max       
-LABEL      | L2         |            |           
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+x=15               | =          | 15         |            | x         
+y=8                | =          | 8          |            | y         
+t1=x>y             | >          | x          | y          | t1        
+ifFalse t1 goto L1 | ifFalse    | t1         |            | L1        
+max=x              | =          | x          |            | max       
+goto L2            | goto       |            |            | L2        
+LABEL L1           | LABEL      |            |            | L1        
+max=y              | =          | y          |            | max       
+LABEL L2           | LABEL      |            |            | L2        
 
 Reverse derivation (top-down)
 ================================

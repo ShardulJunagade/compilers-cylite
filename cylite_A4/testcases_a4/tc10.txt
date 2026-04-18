@@ -26,26 +26,26 @@ int main() {
 if-else max-depth = 1
 
 --- Generated Intermediate Code (Quadruples) ---
-op         | arg1       | arg2       | result    
-------------------------------------------------------------
-=          | 1          |            | start     
-=          | 100        |            | end       
-=          | 80         |            | max       
-LABEL      | L1         |            |           
-<          | start      | end        | t1        
-ifFalse    | t1         |            | L2        
->          | start      | max        | t2        
-ifFalse    | t2         |            | L3        
-=          | start      |            | max       
-goto       | L4         |            |           
-LABEL      | L3         |            |           
-+          | max        | 1          | t3        
-=          | t3         |            | max       
-LABEL      | L4         |            |           
-+          | start      | 1          | t4        
-=          | t4         |            | start     
-goto       | L1         |            |           
-LABEL      | L2         |            |           
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+start=1            | =          | 1          |            | start     
+end=100            | =          | 100        |            | end       
+max=80             | =          | 80         |            | max       
+LABEL L1           | LABEL      |            |            | L1        
+t1=start<end       | <          | start      | end        | t1        
+ifFalse t1 goto L2 | ifFalse    | t1         |            | L2        
+t2=start>max       | >          | start      | max        | t2        
+ifFalse t2 goto L3 | ifFalse    | t2         |            | L3        
+max=start          | =          | start      |            | max       
+goto L4            | goto       |            |            | L4        
+LABEL L3           | LABEL      |            |            | L3        
+t3=max+1           | +          | max        | 1          | t3        
+max=t3             | =          | t3         |            | max       
+LABEL L4           | LABEL      |            |            | L4        
+t4=start+1         | +          | start      | 1          | t4        
+start=t4           | =          | t4         |            | start     
+goto L1            | goto       |            |            | L1        
+LABEL L2           | LABEL      |            |            | L2        
 
 Reverse derivation (top-down)
 ================================

@@ -23,21 +23,21 @@ int main() {
 if-else max-depth = 1
 
 --- Generated Intermediate Code (Quadruples) ---
-op         | arg1       | arg2       | result    
-------------------------------------------------------------
-=          | 1          |            | a         
-=          | 2          |            | b         
-=          | 3          |            | c         
-<          | a          | b          | t1        
-ifFalse    | t1         |            | L1        
-<          | b          | c          | t2        
-ifFalse    | t2         |            | L2        
-=          | c          |            | a         
-goto       | L3         |            |           
-LABEL      | L2         |            |           
-=          | 0          |            | a         
-LABEL      | L3         |            |           
-LABEL      | L1         |            |           
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+a=1                | =          | 1          |            | a         
+b=2                | =          | 2          |            | b         
+c=3                | =          | 3          |            | c         
+t1=a<b             | <          | a          | b          | t1        
+ifFalse t1 goto L1 | ifFalse    | t1         |            | L1        
+t2=b<c             | <          | b          | c          | t2        
+ifFalse t2 goto L2 | ifFalse    | t2         |            | L2        
+a=c                | =          | c          |            | a         
+goto L3            | goto       |            |            | L3        
+LABEL L2           | LABEL      |            |            | L2        
+a=0                | =          | 0          |            | a         
+LABEL L3           | LABEL      |            |            | L3        
+LABEL L1           | LABEL      |            |            | L1        
 
 Reverse derivation (top-down)
 ================================

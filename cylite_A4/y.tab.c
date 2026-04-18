@@ -3142,7 +3142,7 @@ yyreduce:
 #line 785 "yapl.y"
     {
         char *l_start = new_label();
-        emit("LABEL", l_start, "", "");
+		emit("LABEL", "", "", l_start);
         strcpy((yyval.name), l_start); /* FIX: strcpy */
     }
 #line 3149 "y.tab.c"
@@ -3162,8 +3162,8 @@ yyreduce:
 #line 804 "yapl.y"
       {
           char *l_end = new_label();
-          emit("goto", l_end, "", "");
-          emit("LABEL", (yyvsp[-2].name), "", ""); /* $1 is the label from if_prefix */
+					emit("goto", "", "", l_end);
+					emit("LABEL", "", "", (yyvsp[-2].name)); /* $1 is the label from if_prefix */
           
           ladder_len++; 
           (yyval.val) = (ladder_len - 1); 
@@ -3175,7 +3175,7 @@ yyreduce:
   case 263: /* selection_statement: if_prefix statement ELSE @1 statement  */
 #line 814 "yapl.y"
       {
-          emit("LABEL", (yyvsp[-1].name), "", ""); 
+		  emit("LABEL", "", "", (yyvsp[-1].name)); 
           if(ladder_len >= max) { max = ladder_len; } 
           ladder_len = (yyvsp[-1].val); 
       }
@@ -3185,7 +3185,7 @@ yyreduce:
   case 264: /* selection_statement: if_prefix statement  */
 #line 822 "yapl.y"
       {
-          emit("LABEL", (yyvsp[-1].name), "", "");
+					emit("LABEL", "", "", (yyvsp[-1].name));
           ifs_wo_else++;
       }
 #line 3192 "y.tab.c"
@@ -3195,8 +3195,8 @@ yyreduce:
 #line 829 "yapl.y"
       {
           char *l_end = new_label();
-          emit("goto", l_end, "", "");
-          emit("LABEL", (yyvsp[-3].name), "", "");
+					emit("goto", "", "", l_end);
+					emit("LABEL", "", "", (yyvsp[-3].name));
           
           ladder_len++; 
           (yyval.val) = (ladder_len - 1); 
@@ -3208,7 +3208,7 @@ yyreduce:
   case 266: /* selection_statement: if_prefix statement elif_list ELSE @2 statement  */
 #line 839 "yapl.y"
       { 
-          emit("LABEL", (yyvsp[-1].name), "", "");
+		  emit("LABEL", "", "", (yyvsp[-1].name));
           if(ladder_len >= max) { max = ladder_len; } 
           ladder_len = (yyvsp[-1].val); 
       }
@@ -3218,7 +3218,7 @@ yyreduce:
   case 267: /* selection_statement: if_prefix statement elif_list  */
 #line 847 "yapl.y"
       { 
-          emit("LABEL", (yyvsp[-2].name), "", "");
+					emit("LABEL", "", "", (yyvsp[-2].name));
       }
 #line 3224 "y.tab.c"
     break;
@@ -3228,8 +3228,8 @@ yyreduce:
       {
           char l_start[10], l_end[10];
           sscanf((yyvsp[-1].name), "%s %s", l_start, l_end); /* Unpack labels from while_cond */
-          emit("goto", l_start, "", "");
-          emit("LABEL", l_end, "", "");
+					emit("goto", "", "", l_start);
+					emit("LABEL", "", "", l_end);
       }
 #line 3235 "y.tab.c"
     break;
@@ -3238,7 +3238,7 @@ yyreduce:
 #line 865 "yapl.y"
       {
           char *l_start = new_label();
-          emit("LABEL", l_start, "", "");
+					emit("LABEL", "", "", l_start);
           strcpy((yyval.name), l_start); /* FIX: strcpy */
       }
 #line 3245 "y.tab.c"
@@ -3249,8 +3249,8 @@ yyreduce:
       {
           char *l_end = new_label();
           emit("ifFalse", (yyvsp[-2].name), "", l_end);
-          emit("goto", (yyvsp[-6].name), "", ""); 
-          emit("LABEL", l_end, "", "");  
+		  emit("goto", "", "", (yyvsp[-6].name)); 
+		  emit("LABEL", "", "", l_end);  
       }
 #line 3256 "y.tab.c"
     break;
@@ -3259,7 +3259,7 @@ yyreduce:
 #line 880 "yapl.y"
       {
           char *l_cond = new_label();
-          emit("LABEL", l_cond, "", "");
+					emit("LABEL", "", "", l_cond);
           strcpy((yyval.name), l_cond); /* FIX: strcpy */
       }
 #line 3266 "y.tab.c"
@@ -3273,8 +3273,8 @@ yyreduce:
           char *l_end = new_label();
           
           emit("ifFalse", (yyvsp[0].name), "", l_end); 
-          emit("goto", l_body, "", "");
-          emit("LABEL", l_inc, "", "");
+		  emit("goto", "", "", l_body);
+		  emit("LABEL", "", "", l_inc);
           sprintf((yyval.name), "%s %s %s", l_body, l_inc, l_end);
       }
 #line 3281 "y.tab.c"
@@ -3283,12 +3283,12 @@ yyreduce:
   case 274: /* @6: %empty  */
 #line 897 "yapl.y"
       {
-          emit("goto", (yyvsp[-3].name), "", ""); 
+		  emit("goto", "", "", (yyvsp[-3].name)); 
           
           char l_body[10], l_inc[10], l_end[10];
           sscanf((yyvsp[-1].name), "%s %s %s", l_body, l_inc, l_end);
           
-          emit("LABEL", l_body, "", "");
+		  emit("LABEL", "", "", l_body);
           sprintf((yyval.name), "%s %s", l_inc, l_end); 
       }
 #line 3295 "y.tab.c"
@@ -3300,8 +3300,8 @@ yyreduce:
           char l_inc[10], l_end[10];
           sscanf((yyvsp[-2].name), "%s %s", l_inc, l_end);
           
-          emit("goto", l_inc, "", "");
-          emit("LABEL", l_end, "", "");
+		  emit("goto", "", "", l_inc);
+		  emit("LABEL", "", "", l_end);
       }
 #line 3307 "y.tab.c"
     break;
@@ -3312,7 +3312,7 @@ yyreduce:
           emit("=", (yyvsp[-4].name), "", (yyvsp[-8].name));
           char *l_cond = new_label();
           char *l_end = new_label();
-          emit("LABEL", l_cond, "", "");
+		  emit("LABEL", "", "", l_cond);
           
           char *t_cond = new_temp();
           emit("<=", (yyvsp[-8].name), (yyvsp[-2].name), t_cond);
@@ -3333,8 +3333,8 @@ yyreduce:
           emit("+", id_name, "1", t_inc);
           emit("=", t_inc, "", id_name);
           
-          emit("goto", l_cond, "", "");
-          emit("LABEL", l_end, "", "");
+		  emit("goto", "", "", l_cond);
+		  emit("LABEL", "", "", l_end);
       }
 #line 3340 "y.tab.c"
     break;
@@ -3981,12 +3981,50 @@ void yyerror(const char *s)
 	exit(-1);
 }
 
+static void format_quad_statement(const struct quadruple *q, char *out, size_t out_sz)
+{
+	if (strcmp(q->op, "=") == 0)
+	{
+		snprintf(out, out_sz, "%s=%s", q->result, q->arg1);
+	}
+	else if (strcmp(q->op, "minus") == 0)
+	{
+		snprintf(out, out_sz, "%s=minus %s", q->result, q->arg1);
+	}
+	else if (strcmp(q->op, "ifFalse") == 0)
+	{
+		snprintf(out, out_sz, "ifFalse %s goto %s", q->arg1, q->result);
+	}
+	else if (strcmp(q->op, "goto") == 0)
+	{
+		const char *target = (q->result[0] != '\0') ? q->result : q->arg1;
+		snprintf(out, out_sz, "goto %s", target);
+	}
+	else if (strcmp(q->op, "LABEL") == 0)
+	{
+		const char *target = (q->result[0] != '\0') ? q->result : q->arg1;
+		snprintf(out, out_sz, "LABEL %s", target);
+	}
+	else if (q->arg2[0] != '\0')
+	{
+		snprintf(out, out_sz, "%s=%s%s%s", q->result, q->arg1, q->op, q->arg2);
+	}
+	else
+	{
+		snprintf(out, out_sz, "%s=%s %s", q->result, q->op, q->arg1);
+	}
+}
+
 void print_quad_table() {
+	char stmt[128];
+
     printf("\n--- Generated Intermediate Code (Quadruples) ---\n");
-    printf("%-10s | %-10s | %-10s | %-10s\n", "op", "arg1", "arg2", "result");
-    printf("------------------------------------------------------------\n");
+	printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", "statement", "op", "arg1", "arg2", "result");
+	printf("--------------------------------------------------------------------------------\n");
     for(int i = 0; i < quad_idx; i++) {
-        printf("%-10s | %-10s | %-10s | %-10s\n", 
+		format_quad_statement(&quad_table[i], stmt, sizeof(stmt));
+		printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", 
+			   stmt,
                quad_table[i].op, quad_table[i].arg1, 
                quad_table[i].arg2, quad_table[i].result);
     }

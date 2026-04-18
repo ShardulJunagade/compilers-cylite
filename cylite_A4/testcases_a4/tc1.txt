@@ -18,13 +18,13 @@ int main() {
 if-else max-depth = 0
 
 --- Generated Intermediate Code (Quadruples) ---
-op         | arg1       | arg2       | result    
-------------------------------------------------------------
-=          | 10         |            | a         
-=          | 20         |            | b         
-*          | b          | 5          | t1        
-+          | a          | t1         | t2        
-=          | t2         |            | c         
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+a=10               | =          | 10         |            | a         
+b=20               | =          | 20         |            | b         
+t1=b*5             | *          | b          | 5          | t1        
+t2=a+t1            | +          | a          | t1         | t2        
+c=t2               | =          | t2         |            | c         
 
 Reverse derivation (top-down)
 ================================

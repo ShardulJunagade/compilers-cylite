@@ -166,7 +166,7 @@ This section presents Assignment 4 changes in a logical compiler flow, from IR s
 \begin{itemize}
     \item \textbf{Implementation details:} Added helper nonterminals and actions for conditionals/loops that emit \texttt{ifFalse}, \texttt{goto}, and \texttt{LABEL} instructions.
     \item \textbf{How this helps IR generation:} Lowers structured control flow into branch-and-label TAC, producing an explicit control-flow graph that can be analyzed or optimized later.
-    \item \textbf{Technical impact:} The grammar now emits entry, body, increment, and exit labels for loops and emits true/false branch structure for conditionals, including if-elif-else chains.
+    \item \textbf{Technical impact:} The grammar now emits entry, body, increment, and exit labels for loops and emits true/false branch structure for conditionals, including if-elif-else chains. In the latest update, \texttt{goto} and \texttt{LABEL} targets are emitted in the \texttt{result} field, keeping control-flow quadruples schema-consistent with readable output.
     \item \textbf{Why this is necessary:} High-level constructs cannot be consumed by later compiler stages directly; they must be transformed into explicit jump-based flow in IR.
 \end{itemize}
 
@@ -178,9 +178,9 @@ This section presents Assignment 4 changes in a logical compiler flow, from IR s
 
 \subsection{7. Output and Diagnostics Flow}
 \begin{itemize}
-    \item \textbf{Implementation details:} Added \texttt{print\_quad\_table()} and updated \texttt{main()} to print source, diagnostics, and generated TAC.
+    \item \textbf{Implementation details:} Added \texttt{print\_quad\_table()} and updated \texttt{main()} to print source, diagnostics, and generated TAC. The current implementation uses \texttt{format\_quad\_statement()} to derive a readable \texttt{statement} column from \texttt{(op, arg1, arg2, result)}.
     \item \textbf{How this helps IR generation:} Makes IR output directly visible for validation, helping confirm that semantic actions produce the expected quadruples per testcase.
-    \item \textbf{Technical impact:} The output order now clearly mirrors the compilation pipeline: input program $\rightarrow$ parser success and counters $\rightarrow$ TAC table $\rightarrow$ reverse derivation.
+    \item \textbf{Technical impact:} The output order now clearly mirrors the compilation pipeline: input program $\rightarrow$ parser success and counters $\rightarrow$ TAC table $\rightarrow$ reverse derivation. The generated table remains aligned for both expression and control-flow rows.
     \item \textbf{Why this is necessary:} Assignment evaluation requires demonstrable generated IR, and this output format provides direct evidence for correctness.
 \end{itemize}
 
@@ -207,15 +207,21 @@ int main() {
 \end{lstlisting}
 
 \subsection{Observed Generated IR (from tool output)}
-\begin{lstlisting}
-op         | arg1       | arg2       | result
-------------------------------------------------------------
-=          | 10         |            | a
-=          | 20         |            | b
-*          | b          | 5          | t1
-+          | a          | t1         | t2
-=          | t2         |            | c
-\end{lstlisting}
+\begin{center}
+\small
+\ttfamily
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+statement & op & arg1 & arg2 & result \\
+\hline
+a=10 & = & 10 &  & a \\
+b=20 & = & 20 &  & b \\
+t1=b*5 & * & b & 5 & t1 \\
+t2=a+t1 & + & a & t1 & t2 \\
+c=t2 & = & t2 &  & c \\
+\hline
+\end{tabular}
+\end{center}
 
 \subsection{Requirement-wise Explanation}
 \begin{enumerate}
@@ -226,6 +232,8 @@ op         | arg1       | arg2       | result
 
 \subsection{Result}
 The implementation satisfies all three Part 3 requirements. The generated output is tabular, ordered, and readable, which supports both debugging and evaluation.
+
+After normalizing control-flow emission, the generated IR now shows branch targets in a consistent way. For example, in control-flow test outputs, rows appear as \texttt{goto L2} and \texttt{LABEL L1} with the label stored in the \texttt{result} column, which keeps output formatting and interpretation unambiguous.
 
 
 \begin{figure}[H]
@@ -265,12 +273,62 @@ line 3, column 13: unexpected token ";"
 \subsection{Result}
 The implementation satisfies Part 4 expectations for practical diagnostics and runtime robustness. Invalid input is handled predictably and reported with useful location information.
 
+\subsection{Batch Result on Regenerated Testcases}
+Following the latest parser updates, all testcase files \texttt{tc1.c} through \texttt{tc10.c} were rerun and outputs were regenerated in \texttt{testcases\_a4/tc1.txt} to \texttt{testcases\_a4/tc10.txt}. All runs completed successfully and produced parsing-success diagnostics along with IR tables.
+
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{./Images/image11.png}
     \caption{meaningful syntax-error reporting and graceful termination on incorrect input.}
 \end{figure}
+
+\section{Additional Worked Example: \texttt{tc3.c}}
+
+To further explain intermediate-code generation, this section analyzes testcase \texttt{testcases\_a4/tc3.c}, which contains a simple \texttt{if} condition without \texttt{else}.
+
+\subsection{Input Program}
+\begin{lstlisting}
+int main() {
+    int a; int b;
+    a = 5;
+    b = 10;
+    if (a < b) {
+        a = a + 1;
+    }
+}
+\end{lstlisting}
+
+\subsection{Observed Generated IR}
+\begin{center}
+\small
+\ttfamily
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+statement & op & arg1 & arg2 & result \\
+\hline
+a=5 & = & 5 &  & a \\
+b=10 & = & 10 &  & b \\
+t1=a<b & < & a & b & t1 \\
+ifFalse t1 goto L1 & ifFalse & t1 &  & L1 \\
+t2=a+1 & + & a & 1 & t2 \\
+a=t2 & = & t2 &  & a \\
+LABEL L1 & LABEL &  &  & L1 \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Step-by-Step Explanation}
+\begin{enumerate}
+    \item \textbf{Initialization:} The first two rows assign constants to \texttt{a} and \texttt{b}.
+    \item \textbf{Condition evaluation:} \texttt{t1 = a < b} computes the relational condition and stores the Boolean-style result in a temporary.
+    \item \textbf{Conditional branch:} \texttt{ifFalse t1 goto L1} skips the \texttt{if} body when the condition is false.
+    \item \textbf{If-body execution:} When the condition is true, \texttt{t2 = a + 1} and then \texttt{a = t2} implement the update.
+    \item \textbf{Join point:} \texttt{LABEL L1} marks the control-flow merge point after the \texttt{if} block.
+\end{enumerate}
+
+\subsection{Result}
+This testcase confirms correct translation of a single-branch \texttt{if} statement into TAC: condition computation, conditional jump, body instructions, and final label placement are all emitted in proper execution order.
 
 
 \section{Build and Reproduction Steps}

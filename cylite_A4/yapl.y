@@ -784,7 +784,7 @@ while_prefix
     : WHILE
     {
         char *l_start = new_label();
-        emit("LABEL", l_start, "", "");
+		emit("LABEL", "", "", l_start);
         strcpy($$, l_start); /* FIX: strcpy */
     }
     ;
@@ -803,8 +803,8 @@ selection_statement
     : if_prefix statement ELSE 
       {
           char *l_end = new_label();
-          emit("goto", l_end, "", "");
-          emit("LABEL", $1, "", ""); /* $1 is the label from if_prefix */
+					emit("goto", "", "", l_end);
+					emit("LABEL", "", "", $1); /* $1 is the label from if_prefix */
           
           ladder_len++; 
           $<val>$ = (ladder_len - 1); 
@@ -812,7 +812,7 @@ selection_statement
       }
       statement 
       {
-          emit("LABEL", $<name>4, "", ""); 
+		  emit("LABEL", "", "", $<name>4); 
           if(ladder_len >= max) { max = ladder_len; } 
           ladder_len = $<val>4; 
       }
@@ -820,7 +820,7 @@ selection_statement
     /* RULE 2: IF ONLY */
     | if_prefix statement %prec LOWER_THAN_ELSE 
       {
-          emit("LABEL", $1, "", "");
+					emit("LABEL", "", "", $1);
           ifs_wo_else++;
       }
 
@@ -828,8 +828,8 @@ selection_statement
     | if_prefix statement elif_list ELSE 
       {
           char *l_end = new_label();
-          emit("goto", l_end, "", "");
-          emit("LABEL", $1, "", "");
+					emit("goto", "", "", l_end);
+					emit("LABEL", "", "", $1);
           
           ladder_len++; 
           $<val>$ = (ladder_len - 1); 
@@ -837,7 +837,7 @@ selection_statement
       } 
       statement 
       { 
-          emit("LABEL", $<name>5, "", "");
+		  emit("LABEL", "", "", $<name>5);
           if(ladder_len >= max) { max = ladder_len; } 
           ladder_len = $<val>5; 
       }
@@ -845,7 +845,7 @@ selection_statement
     /* RULE 4: IF-ELIF (No final else) */
     | if_prefix statement elif_list %prec LOWER_THAN_ELSE
       { 
-          emit("LABEL", $1, "", "");
+					emit("LABEL", "", "", $1);
       }
     | SWITCH '(' expression ')' statement
     ;
@@ -856,30 +856,30 @@ iteration_statement
       {
           char l_start[10], l_end[10];
           sscanf($1, "%s %s", l_start, l_end); /* Unpack labels from while_cond */
-          emit("goto", l_start, "", "");
-          emit("LABEL", l_end, "", "");
+					emit("goto", "", "", l_start);
+					emit("LABEL", "", "", l_end);
       }
 
     /* RULE 2: DO-WHILE Loop */
     | DO 
       {
           char *l_start = new_label();
-          emit("LABEL", l_start, "", "");
+					emit("LABEL", "", "", l_start);
           strcpy($<name>$, l_start); /* FIX: strcpy */
       }
       statement WHILE '(' expression ')' ';'
       {
           char *l_end = new_label();
           emit("ifFalse", $6, "", l_end);
-          emit("goto", $<name>2, "", ""); 
-          emit("LABEL", l_end, "", "");  
+		  emit("goto", "", "", $<name>2); 
+		  emit("LABEL", "", "", l_end);  
       }
 
     /* RULE 3: Standard FOR Loop */
     | FOR '(' expression_statement 
       {
           char *l_cond = new_label();
-          emit("LABEL", l_cond, "", "");
+					emit("LABEL", "", "", l_cond);
           strcpy($<name>$, l_cond); /* FIX: strcpy */
       }
       expression_statement 
@@ -889,18 +889,18 @@ iteration_statement
           char *l_end = new_label();
           
           emit("ifFalse", $5, "", l_end); 
-          emit("goto", l_body, "", "");
-          emit("LABEL", l_inc, "", "");
+		  emit("goto", "", "", l_body);
+		  emit("LABEL", "", "", l_inc);
           sprintf($<name>$, "%s %s %s", l_body, l_inc, l_end);
       }
       expression 
       {
-          emit("goto", $<name>4, "", ""); 
+		  emit("goto", "", "", $<name>4); 
           
           char l_body[10], l_inc[10], l_end[10];
           sscanf($<name>6, "%s %s %s", l_body, l_inc, l_end);
           
-          emit("LABEL", l_body, "", "");
+		  emit("LABEL", "", "", l_body);
           sprintf($<name>$, "%s %s", l_inc, l_end); 
       }
       ')' statement
@@ -908,8 +908,8 @@ iteration_statement
           char l_inc[10], l_end[10];
           sscanf($<name>8, "%s %s", l_inc, l_end);
           
-          emit("goto", l_inc, "", "");
-          emit("LABEL", l_end, "", "");
+		  emit("goto", "", "", l_inc);
+		  emit("LABEL", "", "", l_end);
       }
 
     /* RULE 4: Python-style RANGE Loop */
@@ -918,7 +918,7 @@ iteration_statement
           emit("=", $7, "", $3);
           char *l_cond = new_label();
           char *l_end = new_label();
-          emit("LABEL", l_cond, "", "");
+		  emit("LABEL", "", "", l_cond);
           
           char *t_cond = new_temp();
           emit("<=", $3, $9, t_cond);
@@ -935,8 +935,8 @@ iteration_statement
           emit("+", id_name, "1", t_inc);
           emit("=", t_inc, "", id_name);
           
-          emit("goto", l_cond, "", "");
-          emit("LABEL", l_end, "", "");
+		  emit("goto", "", "", l_cond);
+		  emit("LABEL", "", "", l_end);
       }
     /* | FOR '(' expression_statement expression_statement ')' statement */
     /* | FOR '(' declaration expression_statement ')' statement */
@@ -1370,12 +1370,50 @@ void yyerror(const char *s)
 	exit(-1);
 }
 
+static void format_quad_statement(const struct quadruple *q, char *out, size_t out_sz)
+{
+	if (strcmp(q->op, "=") == 0)
+	{
+		snprintf(out, out_sz, "%s=%s", q->result, q->arg1);
+	}
+	else if (strcmp(q->op, "minus") == 0)
+	{
+		snprintf(out, out_sz, "%s=minus %s", q->result, q->arg1);
+	}
+	else if (strcmp(q->op, "ifFalse") == 0)
+	{
+		snprintf(out, out_sz, "ifFalse %s goto %s", q->arg1, q->result);
+	}
+	else if (strcmp(q->op, "goto") == 0)
+	{
+		const char *target = (q->result[0] != '\0') ? q->result : q->arg1;
+		snprintf(out, out_sz, "goto %s", target);
+	}
+	else if (strcmp(q->op, "LABEL") == 0)
+	{
+		const char *target = (q->result[0] != '\0') ? q->result : q->arg1;
+		snprintf(out, out_sz, "LABEL %s", target);
+	}
+	else if (q->arg2[0] != '\0')
+	{
+		snprintf(out, out_sz, "%s=%s%s%s", q->result, q->arg1, q->op, q->arg2);
+	}
+	else
+	{
+		snprintf(out, out_sz, "%s=%s %s", q->result, q->op, q->arg1);
+	}
+}
+
 void print_quad_table() {
+	char stmt[128];
+
     printf("\n--- Generated Intermediate Code (Quadruples) ---\n");
-    printf("%-10s | %-10s | %-10s | %-10s\n", "op", "arg1", "arg2", "result");
-    printf("------------------------------------------------------------\n");
+	printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", "statement", "op", "arg1", "arg2", "result");
+	printf("--------------------------------------------------------------------------------\n");
     for(int i = 0; i < quad_idx; i++) {
-        printf("%-10s | %-10s | %-10s | %-10s\n", 
+		format_quad_statement(&quad_table[i], stmt, sizeof(stmt));
+		printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", 
+			   stmt,
                quad_table[i].op, quad_table[i].arg1, 
                quad_table[i].arg2, quad_table[i].result);
     }

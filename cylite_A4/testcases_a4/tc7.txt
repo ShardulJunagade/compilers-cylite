@@ -24,28 +24,28 @@ int main() {
 if-else max-depth = 0
 
 --- Generated Intermediate Code (Quadruples) ---
-op         | arg1       | arg2       | result    
-------------------------------------------------------------
-=          | 0          |            | i         
-=          | 0          |            | j         
-=          | 0          |            | count     
-LABEL      | L1         |            |           
-<          | i          | 3          | t1        
-ifFalse    | t1         |            | L2        
-LABEL      | L3         |            |           
-<          | j          | 3          | t2        
-ifFalse    | t2         |            | L4        
-+          | count      | 1          | t3        
-=          | t3         |            | count     
-+          | j          | 1          | t4        
-=          | t4         |            | j         
-goto       | L3         |            |           
-LABEL      | L4         |            |           
-+          | i          | 1          | t5        
-=          | t5         |            | i         
-=          | 0          |            | j         
-goto       | L1         |            |           
-LABEL      | L2         |            |           
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+i=0                | =          | 0          |            | i         
+j=0                | =          | 0          |            | j         
+count=0            | =          | 0          |            | count     
+LABEL L1           | LABEL      |            |            | L1        
+t1=i<3             | <          | i          | 3          | t1        
+ifFalse t1 goto L2 | ifFalse    | t1         |            | L2        
+LABEL L3           | LABEL      |            |            | L3        
+t2=j<3             | <          | j          | 3          | t2        
+ifFalse t2 goto L4 | ifFalse    | t2         |            | L4        
+t3=count+1         | +          | count      | 1          | t3        
+count=t3           | =          | t3         |            | count     
+t4=j+1             | +          | j          | 1          | t4        
+j=t4               | =          | t4         |            | j         
+goto L3            | goto       |            |            | L3        
+LABEL L4           | LABEL      |            |            | L4        
+t5=i+1             | +          | i          | 1          | t5        
+i=t5               | =          | t5         |            | i         
+j=0                | =          | 0          |            | j         
+goto L1            | goto       |            |            | L1        
+LABEL L2           | LABEL      |            |            | L2        
 
 Reverse derivation (top-down)
 ================================

@@ -20,15 +20,15 @@ int main() {
 if-else max-depth = 0
 
 --- Generated Intermediate Code (Quadruples) ---
-op         | arg1       | arg2       | result    
-------------------------------------------------------------
-=          | 5          |            | a         
-=          | 10         |            | b         
-<          | a          | b          | t1        
-ifFalse    | t1         |            | L1        
-+          | a          | 1          | t2        
-=          | t2         |            | a         
-LABEL      | L1         |            |           
+statement          | op         | arg1       | arg2       | result    
+--------------------------------------------------------------------------------
+a=5                | =          | 5          |            | a         
+b=10               | =          | 10         |            | b         
+t1=a<b             | <          | a          | b          | t1        
+ifFalse t1 goto L1 | ifFalse    | t1         |            | L1        
+t2=a+1             | +          | a          | 1          | t2        
+a=t2               | =          | t2         |            | a         
+LABEL L1           | LABEL      |            |            | L1        
 
 Reverse derivation (top-down)
 ================================
