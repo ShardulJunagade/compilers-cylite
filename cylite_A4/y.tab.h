@@ -145,9 +145,9 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 91 "yapl.y"
+#line 120 "yapl.y"
 
-    char name[50];  /* Holds variable names or temp names like 't1' */
+	char name[200];  /* Holds variable names or temp names like 't1' */
     int val;
     struct symtab *symp; /* Added from your second union */
 

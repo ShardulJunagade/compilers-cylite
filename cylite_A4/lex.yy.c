@@ -1136,7 +1136,7 @@ case 34:
 YY_RULE_SETUP
 #line 90 "yapl.l"
 { 
-    strcpy(yylval.name, yytext);
+    snprintf(yylval.name, sizeof(yylval.name), "%s", yytext);
     return check_type(); 
 }
 	YY_BREAK
@@ -1148,7 +1148,7 @@ case 37:
 YY_RULE_SETUP
 #line 97 "yapl.l"
 { 
-    strcpy(yylval.name, yytext); /* Copy "5" or "10" to the parser */
+    snprintf(yylval.name, sizeof(yylval.name), "%s", yytext); /* Copy "5" or "10" to the parser */
     return I_CONSTANT; 
 }
 	YY_BREAK
