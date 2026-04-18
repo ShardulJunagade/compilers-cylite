@@ -91,10 +91,10 @@ int max=-1;
 int label_count = 0;
 
 struct quadruple {
-    char op[10];
-    char arg1[50];
-    char arg2[50];
-    char result[50];
+	char op[16];
+	char arg1[200];
+	char arg2[200];
+	char result[200];
 };
 
 struct quadruple quad_table[1000];
@@ -103,14 +103,14 @@ int temp_count = 0;
 
 /* Generates t1, t2, t3... */
 char* new_temp() {
-    char* t = (char*)malloc(10);
-    sprintf(t, "t%d", ++temp_count);
+	char* t = (char*)malloc(32);
+	snprintf(t, 32, "t%d", ++temp_count);
     return t;
 }
 
 char* new_label() {
-    char* l = (char*)malloc(10);
-    sprintf(l, "L%d", ++label_count);
+	char* l = (char*)malloc(32);
+	snprintf(l, 32, "L%d", ++label_count);
     return l;
 }
 
@@ -121,6 +121,35 @@ void emit(char* op, char* arg1, char* arg2, char* res) {
     strcpy(quad_table[quad_idx].arg2, arg2);
     strcpy(quad_table[quad_idx].result, res);
     quad_idx++;
+}
+
+static void pack2(char *dst, size_t dst_sz, const char *a, const char *b) {
+	size_t used;
+
+	if (dst_sz == 0) {
+		return;
+	}
+
+	dst[0] = '\0';
+	if (a != NULL) {
+		strncat(dst, a, dst_sz - 1);
+	}
+
+	used = strlen(dst);
+	if (b != NULL && b[0] != '\0' && used < dst_sz - 1) {
+		strncat(dst, " ", dst_sz - 1 - used);
+		used = strlen(dst);
+		strncat(dst, b, dst_sz - 1 - used);
+	}
+}
+
+static void pack3(char *dst, size_t dst_sz, const char *a, const char *b, const char *c) {
+	pack2(dst, dst_sz, a, b);
+
+	if (c != NULL && c[0] != '\0' && strlen(dst) < dst_sz - 1) {
+		strncat(dst, " ", dst_sz - 1 - strlen(dst));
+		strncat(dst, c, dst_sz - 1 - strlen(dst));
+	}
 }
 
 #define YYDEBUG 1
@@ -156,7 +185,7 @@ static int write_reverse_derivation_svg(const char *svg_path);
 static int looks_like_nonterminal(const char *sym);
 static void free_derivation_steps(void);
 
-#line 160 "y.tab.c"
+#line 189 "y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -291,13 +320,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 91 "yapl.y"
+#line 120 "yapl.y"
 
-    char name[50];  /* Holds variable names or temp names like 't1' */
+	char name[200];  /* Holds variable names or temp names like 't1' */
     int val;
     struct symtab *symp; /* Added from your second union */
 
-#line 301 "y.tab.c"
+#line 330 "y.tab.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -909,36 +938,36 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   143,   143,   144,   145,   146,   147,   151,   152,   153,
-     156,   160,   161,   165,   169,   170,   174,   175,   179,   180,
-     181,   182,   183,   184,   185,   186,   187,   188,   189,   190,
-     195,   196,   203,   210,   221,   227,   233,   242,   243,   244,
-     245,   246,   247,   251,   252,   256,   260,   266,   272,   281,
-     285,   291,   300,   301,   302,   306,   310,   316,   322,   328,
-     334,   343,   347,   353,   362,   363,   367,   368,   372,   373,
-     377,   381,   390,   394,   403,   407,   411,   448,   449,   450,
-     451,   452,   453,   454,   455,   456,   457,   458,   462,   463,
-     467,   471,   472,   473,   477,   478,   479,   480,   481,   482,
-     483,   484,   485,   486,   490,   491,   495,   496,   500,   501,
-     502,   503,   504,   505,   509,   510,   511,   512,   513,   514,
-     515,   516,   517,   518,   519,   520,   521,   522,   523,   524,
-     528,   529,   530,   534,   535,   539,   540,   544,   545,   546,
-     550,   551,   552,   553,   557,   558,   562,   563,   564,   568,
-     569,   570,   571,   572,   576,   577,   581,   582,   586,   590,
-     591,   592,   593,   597,   598,   602,   603,   607,   608,   612,
-     613,   614,   615,   616,   617,   618,   619,   620,   621,   622,
-     623,   624,   625,   629,   630,   631,   632,   636,   637,   642,
-     643,   647,   648,   652,   653,   654,   658,   659,   663,   664,
-     668,   669,   670,   674,   675,   676,   677,   678,   679,   680,
-     681,   682,   683,   684,   685,   686,   687,   688,   689,   690,
-     691,   692,   693,   694,   698,   699,   700,   704,   705,   706,
-     707,   711,   715,   716,   720,   721,   725,   729,   733,   734,
-     735,   736,   737,   738,   739,   740,   744,   745,   746,   750,
-     751,   755,   756,   760,   761,   765,   766,   770,   771,   775,
-     784,   793,   804,   803,   821,   829,   828,   846,   850,   855,
-     865,   864,   880,   886,   897,   879,   917,   916,   944,   948,
-     949,   950,   951,   952,   956,   957,   961,   962,   966,   967,
-     971,   972
+       0,   172,   172,   173,   174,   175,   176,   180,   181,   182,
+     185,   189,   190,   194,   198,   199,   203,   204,   208,   209,
+     210,   211,   212,   213,   214,   215,   216,   217,   218,   219,
+     224,   225,   232,   239,   250,   256,   262,   271,   272,   273,
+     274,   275,   276,   280,   281,   285,   289,   295,   301,   310,
+     314,   320,   329,   330,   331,   335,   339,   345,   351,   357,
+     363,   372,   376,   382,   391,   392,   396,   397,   401,   402,
+     406,   410,   419,   423,   432,   436,   440,   477,   478,   479,
+     480,   481,   482,   483,   484,   485,   486,   487,   491,   492,
+     496,   500,   501,   502,   506,   507,   508,   509,   510,   511,
+     512,   513,   514,   515,   519,   520,   524,   525,   529,   530,
+     531,   532,   533,   534,   538,   539,   540,   541,   542,   543,
+     544,   545,   546,   547,   548,   549,   550,   551,   552,   553,
+     557,   558,   559,   563,   564,   568,   569,   573,   574,   575,
+     579,   580,   581,   582,   586,   587,   591,   592,   593,   597,
+     598,   599,   600,   601,   605,   606,   610,   611,   615,   619,
+     620,   621,   622,   626,   627,   631,   632,   636,   637,   641,
+     642,   643,   644,   645,   646,   647,   648,   649,   650,   651,
+     652,   653,   654,   658,   659,   660,   661,   665,   666,   671,
+     672,   676,   677,   681,   682,   683,   687,   688,   692,   693,
+     697,   698,   699,   703,   704,   705,   706,   707,   708,   709,
+     710,   711,   712,   713,   714,   715,   716,   717,   718,   719,
+     720,   721,   722,   723,   727,   728,   729,   733,   734,   735,
+     736,   740,   744,   745,   749,   750,   754,   758,   762,   763,
+     764,   765,   766,   767,   768,   769,   773,   774,   775,   779,
+     780,   784,   785,   789,   790,   794,   795,   799,   800,   804,
+     813,   822,   833,   832,   850,   858,   857,   875,   879,   884,
+     894,   893,   909,   915,   926,   908,   946,   945,   973,   977,
+     978,   979,   980,   981,   985,   986,   990,   991,   995,   996,
+    1000,  1001
 };
 #endif
 
@@ -2552,107 +2581,113 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* primary_expression: IDENTIFIER  */
-#line 143 "yapl.y"
+#line 172 "yapl.y"
                            { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2558 "y.tab.c"
+#line 2587 "y.tab.c"
     break;
 
   case 3: /* primary_expression: constant  */
-#line 144 "yapl.y"
+#line 173 "yapl.y"
                            { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2564 "y.tab.c"
+#line 2593 "y.tab.c"
     break;
 
   case 4: /* primary_expression: string  */
-#line 145 "yapl.y"
+#line 174 "yapl.y"
                            { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2570 "y.tab.c"
+#line 2599 "y.tab.c"
     break;
 
   case 5: /* primary_expression: '(' expression ')'  */
-#line 146 "yapl.y"
+#line 175 "yapl.y"
                            { strcpy((yyval.name), (yyvsp[-1].name)); }
-#line 2576 "y.tab.c"
+#line 2605 "y.tab.c"
     break;
 
   case 6: /* primary_expression: generic_selection  */
-#line 147 "yapl.y"
+#line 176 "yapl.y"
                            { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2582 "y.tab.c"
+#line 2611 "y.tab.c"
     break;
 
   case 7: /* constant: I_CONSTANT  */
-#line 151 "yapl.y"
-                     {int_consts++;}
-#line 2588 "y.tab.c"
+#line 180 "yapl.y"
+                     { int_consts++; strcpy((yyval.name), (yyvsp[0].name)); }
+#line 2617 "y.tab.c"
+    break;
+
+  case 8: /* constant: F_CONSTANT  */
+#line 181 "yapl.y"
+                     { strcpy((yyval.name), (yyvsp[0].name)); }
+#line 2623 "y.tab.c"
     break;
 
   case 9: /* constant: ENUMERATION_CONSTANT  */
-#line 153 "yapl.y"
+#line 182 "yapl.y"
                                { strcpy((yyval.name), "enum_const"); }
-#line 2594 "y.tab.c"
+#line 2629 "y.tab.c"
     break;
 
   case 13: /* generic_selection: GENERIC '(' assignment_expression ',' generic_assoc_list ')'  */
-#line 165 "yapl.y"
+#line 194 "yapl.y"
                                                                        { strcpy((yyval.name), ""); }
-#line 2600 "y.tab.c"
+#line 2635 "y.tab.c"
     break;
 
   case 26: /* postfix_expression: '(' type_name ')' '{' initializer_list '}'  */
-#line 187 "yapl.y"
+#line 216 "yapl.y"
                                                           { strcpy((yyval.name), ""); }
-#line 2606 "y.tab.c"
+#line 2641 "y.tab.c"
     break;
 
   case 27: /* postfix_expression: '(' type_name ')' '{' initializer_list ',' '}'  */
-#line 188 "yapl.y"
+#line 217 "yapl.y"
                                                           { strcpy((yyval.name), ""); }
-#line 2612 "y.tab.c"
+#line 2647 "y.tab.c"
     break;
 
   case 28: /* postfix_expression: PRINT '(' ')'  */
-#line 189 "yapl.y"
+#line 218 "yapl.y"
                                                           { strcpy((yyval.name), ""); }
-#line 2618 "y.tab.c"
+#line 2653 "y.tab.c"
     break;
 
   case 29: /* postfix_expression: PRINT '(' expression ')'  */
-#line 190 "yapl.y"
+#line 219 "yapl.y"
                                                           { strcpy((yyval.name), ""); }
-#line 2624 "y.tab.c"
+#line 2659 "y.tab.c"
     break;
 
   case 30: /* unary_expression: postfix_expression  */
-#line 195 "yapl.y"
+#line 224 "yapl.y"
                              { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2630 "y.tab.c"
+#line 2665 "y.tab.c"
     break;
 
   case 31: /* unary_expression: INC_OP unary_expression  */
-#line 197 "yapl.y"
+#line 226 "yapl.y"
         {
 		char* t = new_temp();
 		emit("+", (yyvsp[0].name), "1", t);   /* Increment the value */
 		emit("=", t, "", (yyvsp[0].name));    /* Update the original variable */
 		strcpy((yyval.name), (yyvsp[0].name));          /* Return the updated variable name */
 	}
-#line 2641 "y.tab.c"
+#line 2676 "y.tab.c"
     break;
 
   case 32: /* unary_expression: DEC_OP unary_expression  */
-#line 204 "yapl.y"
+#line 233 "yapl.y"
         {
 		char* t = new_temp();
 		emit("-", (yyvsp[0].name), "1", t);   /* Decrement the value */
 		emit("=", t, "", (yyvsp[0].name));    /* Update the original variable */
 		strcpy((yyval.name), (yyvsp[0].name));
 	}
-#line 2652 "y.tab.c"
+#line 2687 "y.tab.c"
     break;
 
   case 33: /* unary_expression: unary_operator cast_expression  */
-#line 211 "yapl.y"
+#line 240 "yapl.y"
         {
 		char* t = new_temp();
 		/* The PDF example explicitly uses "minus" for unary negation  */
@@ -2663,317 +2698,317 @@ yyreduce:
 		}
 		strcpy((yyval.name), t);
 	}
-#line 2667 "y.tab.c"
+#line 2702 "y.tab.c"
     break;
 
   case 34: /* unary_expression: SIZEOF unary_expression  */
-#line 222 "yapl.y"
+#line 251 "yapl.y"
         {
 		char* t = new_temp();
 		emit("sizeof", (yyvsp[0].name), "", t);
 		strcpy((yyval.name), t);
 	}
-#line 2677 "y.tab.c"
+#line 2712 "y.tab.c"
     break;
 
   case 35: /* unary_expression: SIZEOF '(' type_name ')'  */
-#line 228 "yapl.y"
+#line 257 "yapl.y"
         {
 		char* t = new_temp();
 		emit("sizeof", (yyvsp[-1].name), "", t);
 		strcpy((yyval.name), t);
 	}
-#line 2687 "y.tab.c"
+#line 2722 "y.tab.c"
     break;
 
   case 36: /* unary_expression: ALIGNOF '(' type_name ')'  */
-#line 234 "yapl.y"
+#line 263 "yapl.y"
         {
 		char* t = new_temp();
 		emit("alignof", (yyvsp[-1].name), "", t);
 		strcpy((yyval.name), t);
 	}
-#line 2697 "y.tab.c"
+#line 2732 "y.tab.c"
     break;
 
   case 37: /* unary_operator: '&'  */
-#line 242 "yapl.y"
+#line 271 "yapl.y"
               { strcpy((yyval.name), "&"); }
-#line 2703 "y.tab.c"
+#line 2738 "y.tab.c"
     break;
 
   case 38: /* unary_operator: '*'  */
-#line 243 "yapl.y"
+#line 272 "yapl.y"
               { strcpy((yyval.name), "*"); }
-#line 2709 "y.tab.c"
+#line 2744 "y.tab.c"
     break;
 
   case 39: /* unary_operator: '+'  */
-#line 244 "yapl.y"
+#line 273 "yapl.y"
               { strcpy((yyval.name), "+"); }
-#line 2715 "y.tab.c"
+#line 2750 "y.tab.c"
     break;
 
   case 40: /* unary_operator: '-'  */
-#line 245 "yapl.y"
+#line 274 "yapl.y"
               { strcpy((yyval.name), "-"); }
-#line 2721 "y.tab.c"
+#line 2756 "y.tab.c"
     break;
 
   case 41: /* unary_operator: '~'  */
-#line 246 "yapl.y"
+#line 275 "yapl.y"
               { strcpy((yyval.name), "~"); }
-#line 2727 "y.tab.c"
+#line 2762 "y.tab.c"
     break;
 
   case 42: /* unary_operator: '!'  */
-#line 247 "yapl.y"
+#line 276 "yapl.y"
               { strcpy((yyval.name), "!"); }
-#line 2733 "y.tab.c"
+#line 2768 "y.tab.c"
     break;
 
   case 43: /* cast_expression: unary_expression  */
-#line 251 "yapl.y"
+#line 280 "yapl.y"
                            { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2739 "y.tab.c"
+#line 2774 "y.tab.c"
     break;
 
   case 44: /* cast_expression: '(' type_name ')' cast_expression  */
-#line 252 "yapl.y"
+#line 281 "yapl.y"
                                             { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2745 "y.tab.c"
+#line 2780 "y.tab.c"
     break;
 
   case 45: /* multiplicative_expression: cast_expression  */
-#line 257 "yapl.y"
+#line 286 "yapl.y"
     { 
         strcpy((yyval.name), (yyvsp[0].name)); 
     }
-#line 2753 "y.tab.c"
+#line 2788 "y.tab.c"
     break;
 
   case 46: /* multiplicative_expression: multiplicative_expression '*' cast_expression  */
-#line 261 "yapl.y"
+#line 290 "yapl.y"
     {
         char* t = new_temp();      /* Create t1, t2, etc.  */
         emit("*", (yyvsp[-2].name), (yyvsp[0].name), t);     /* op: *, arg1: left, arg2: right, result: temp [cite: 34] */
         strcpy((yyval.name), t);            /* Pass result name up the tree  */
     }
-#line 2763 "y.tab.c"
+#line 2798 "y.tab.c"
     break;
 
   case 47: /* multiplicative_expression: multiplicative_expression '/' cast_expression  */
-#line 267 "yapl.y"
+#line 296 "yapl.y"
     {
         char* t = new_temp();
         emit("/", (yyvsp[-2].name), (yyvsp[0].name), t);     /* Emit row for division [cite: 53] */
         strcpy((yyval.name), t);
     }
-#line 2773 "y.tab.c"
+#line 2808 "y.tab.c"
     break;
 
   case 48: /* multiplicative_expression: multiplicative_expression '%' cast_expression  */
-#line 273 "yapl.y"
+#line 302 "yapl.y"
     {
         char* t = new_temp();
         emit("%", (yyvsp[-2].name), (yyvsp[0].name), t);     /* Emit row for modulo [cite: 53] */
         strcpy((yyval.name), t);
     }
-#line 2783 "y.tab.c"
+#line 2818 "y.tab.c"
     break;
 
   case 49: /* additive_expression: multiplicative_expression  */
-#line 282 "yapl.y"
+#line 311 "yapl.y"
     { 
         strcpy((yyval.name), (yyvsp[0].name)); 
     }
-#line 2791 "y.tab.c"
+#line 2826 "y.tab.c"
     break;
 
   case 50: /* additive_expression: additive_expression '+' multiplicative_expression  */
-#line 286 "yapl.y"
+#line 315 "yapl.y"
     {
         char* t = new_temp();      /* Generate next temporary (e.g., t5) */
         emit("+", (yyvsp[-2].name), (yyvsp[0].name), t);     /* Create quadruple: op, arg1, arg2, result */
         strcpy((yyval.name), t);            /* Pass temporary name to parent rule */
     }
-#line 2801 "y.tab.c"
+#line 2836 "y.tab.c"
     break;
 
   case 51: /* additive_expression: additive_expression '-' multiplicative_expression  */
-#line 292 "yapl.y"
+#line 321 "yapl.y"
     {
         char* t = new_temp();
         emit("-", (yyvsp[-2].name), (yyvsp[0].name), t);     /* Record subtraction in the table */
         strcpy((yyval.name), t);
     }
-#line 2811 "y.tab.c"
+#line 2846 "y.tab.c"
     break;
 
   case 52: /* shift_expression: additive_expression  */
-#line 300 "yapl.y"
+#line 329 "yapl.y"
                               {strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2817 "y.tab.c"
+#line 2852 "y.tab.c"
     break;
 
   case 55: /* relational_expression: shift_expression  */
-#line 307 "yapl.y"
+#line 336 "yapl.y"
     { 
         strcpy((yyval.name), (yyvsp[0].name)); 
     }
-#line 2825 "y.tab.c"
+#line 2860 "y.tab.c"
     break;
 
   case 56: /* relational_expression: relational_expression '<' shift_expression  */
-#line 311 "yapl.y"
+#line 340 "yapl.y"
     {
         char* t = new_temp();
         emit("<", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2835 "y.tab.c"
+#line 2870 "y.tab.c"
     break;
 
   case 57: /* relational_expression: relational_expression '>' shift_expression  */
-#line 317 "yapl.y"
+#line 346 "yapl.y"
     {
         char* t = new_temp();
         emit(">", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2845 "y.tab.c"
+#line 2880 "y.tab.c"
     break;
 
   case 58: /* relational_expression: relational_expression LE_OP shift_expression  */
-#line 323 "yapl.y"
+#line 352 "yapl.y"
     {
         char* t = new_temp();
         emit("<=", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2855 "y.tab.c"
+#line 2890 "y.tab.c"
     break;
 
   case 59: /* relational_expression: relational_expression GE_OP shift_expression  */
-#line 329 "yapl.y"
+#line 358 "yapl.y"
     {
         char* t = new_temp();
         emit(">=", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2865 "y.tab.c"
+#line 2900 "y.tab.c"
     break;
 
   case 60: /* relational_expression: relational_expression TH_OP shift_expression  */
-#line 335 "yapl.y"
+#line 364 "yapl.y"
     {
         char* t = new_temp();
         emit("<=>", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2875 "y.tab.c"
+#line 2910 "y.tab.c"
     break;
 
   case 61: /* equality_expression: relational_expression  */
-#line 344 "yapl.y"
+#line 373 "yapl.y"
     { 
         strcpy((yyval.name), (yyvsp[0].name)); 
     }
-#line 2883 "y.tab.c"
+#line 2918 "y.tab.c"
     break;
 
   case 62: /* equality_expression: equality_expression EQ_OP relational_expression  */
-#line 348 "yapl.y"
+#line 377 "yapl.y"
     {
         char* t = new_temp();
         emit("==", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2893 "y.tab.c"
+#line 2928 "y.tab.c"
     break;
 
   case 63: /* equality_expression: equality_expression NE_OP relational_expression  */
-#line 354 "yapl.y"
+#line 383 "yapl.y"
     {
         char* t = new_temp();
         emit("!=", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2903 "y.tab.c"
+#line 2938 "y.tab.c"
     break;
 
   case 64: /* and_expression: equality_expression  */
-#line 362 "yapl.y"
+#line 391 "yapl.y"
                               { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2909 "y.tab.c"
+#line 2944 "y.tab.c"
     break;
 
   case 66: /* exclusive_or_expression: and_expression  */
-#line 367 "yapl.y"
+#line 396 "yapl.y"
                          { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2915 "y.tab.c"
+#line 2950 "y.tab.c"
     break;
 
   case 68: /* inclusive_or_expression: exclusive_or_expression  */
-#line 372 "yapl.y"
+#line 401 "yapl.y"
                                   { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2921 "y.tab.c"
+#line 2956 "y.tab.c"
     break;
 
   case 70: /* logical_and_expression: inclusive_or_expression  */
-#line 378 "yapl.y"
+#line 407 "yapl.y"
     { 
         strcpy((yyval.name), (yyvsp[0].name)); 
     }
-#line 2929 "y.tab.c"
+#line 2964 "y.tab.c"
     break;
 
   case 71: /* logical_and_expression: logical_and_expression AND_OP inclusive_or_expression  */
-#line 382 "yapl.y"
+#line 411 "yapl.y"
     {
         char* t = new_temp();
         emit("&&", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2939 "y.tab.c"
+#line 2974 "y.tab.c"
     break;
 
   case 72: /* logical_or_expression: logical_and_expression  */
-#line 391 "yapl.y"
+#line 420 "yapl.y"
     { 
         strcpy((yyval.name), (yyvsp[0].name)); 
     }
-#line 2947 "y.tab.c"
+#line 2982 "y.tab.c"
     break;
 
   case 73: /* logical_or_expression: logical_or_expression OR_OP logical_and_expression  */
-#line 395 "yapl.y"
+#line 424 "yapl.y"
     {
         char* t = new_temp();
         emit("||", (yyvsp[-2].name), (yyvsp[0].name), t);
         strcpy((yyval.name), t);
     }
-#line 2957 "y.tab.c"
+#line 2992 "y.tab.c"
     break;
 
   case 74: /* conditional_expression: logical_or_expression  */
-#line 403 "yapl.y"
+#line 432 "yapl.y"
                                 { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 2963 "y.tab.c"
+#line 2998 "y.tab.c"
     break;
 
   case 75: /* assignment_expression: conditional_expression  */
-#line 408 "yapl.y"
+#line 437 "yapl.y"
         { 
 		strcpy((yyval.name), (yyvsp[0].name)); 
 	}
-#line 2971 "y.tab.c"
+#line 3006 "y.tab.c"
     break;
 
   case 76: /* assignment_expression: unary_expression assignment_operator assignment_expression  */
-#line 412 "yapl.y"
+#line 441 "yapl.y"
         {
-                char target[50];
+			char target[200];
                 strcpy(target, (yyvsp[-2].name));
                 
                 // VALIDATION CHECK: Eliminate unary ops on LHS
@@ -3005,161 +3040,161 @@ yyreduce:
                 }
                 strcpy((yyval.name), target);
         }
-#line 3009 "y.tab.c"
+#line 3044 "y.tab.c"
     break;
 
   case 77: /* assignment_operator: '='  */
-#line 448 "yapl.y"
+#line 477 "yapl.y"
                        { strcpy((yyval.name), "="); }
-#line 3015 "y.tab.c"
+#line 3050 "y.tab.c"
     break;
 
   case 78: /* assignment_operator: MUL_ASSIGN  */
-#line 449 "yapl.y"
+#line 478 "yapl.y"
                        { strcpy((yyval.name), "*="); }
-#line 3021 "y.tab.c"
+#line 3056 "y.tab.c"
     break;
 
   case 79: /* assignment_operator: DIV_ASSIGN  */
-#line 450 "yapl.y"
+#line 479 "yapl.y"
                        { strcpy((yyval.name), "/="); }
-#line 3027 "y.tab.c"
+#line 3062 "y.tab.c"
     break;
 
   case 80: /* assignment_operator: MOD_ASSIGN  */
-#line 451 "yapl.y"
+#line 480 "yapl.y"
                        { strcpy((yyval.name), "%="); }
-#line 3033 "y.tab.c"
+#line 3068 "y.tab.c"
     break;
 
   case 81: /* assignment_operator: ADD_ASSIGN  */
-#line 452 "yapl.y"
+#line 481 "yapl.y"
                        { strcpy((yyval.name), "+="); }
-#line 3039 "y.tab.c"
+#line 3074 "y.tab.c"
     break;
 
   case 82: /* assignment_operator: SUB_ASSIGN  */
-#line 453 "yapl.y"
+#line 482 "yapl.y"
                        { strcpy((yyval.name), "-="); }
-#line 3045 "y.tab.c"
+#line 3080 "y.tab.c"
     break;
 
   case 83: /* assignment_operator: LEFT_ASSIGN  */
-#line 454 "yapl.y"
+#line 483 "yapl.y"
                        { strcpy((yyval.name), "<<="); }
-#line 3051 "y.tab.c"
+#line 3086 "y.tab.c"
     break;
 
   case 84: /* assignment_operator: RIGHT_ASSIGN  */
-#line 455 "yapl.y"
+#line 484 "yapl.y"
                        { strcpy((yyval.name), ">>="); }
-#line 3057 "y.tab.c"
+#line 3092 "y.tab.c"
     break;
 
   case 85: /* assignment_operator: AND_ASSIGN  */
-#line 456 "yapl.y"
+#line 485 "yapl.y"
                        { strcpy((yyval.name), "&="); }
-#line 3063 "y.tab.c"
+#line 3098 "y.tab.c"
     break;
 
   case 86: /* assignment_operator: XOR_ASSIGN  */
-#line 457 "yapl.y"
+#line 486 "yapl.y"
                        { strcpy((yyval.name), "^="); }
-#line 3069 "y.tab.c"
+#line 3104 "y.tab.c"
     break;
 
   case 87: /* assignment_operator: OR_ASSIGN  */
-#line 458 "yapl.y"
+#line 487 "yapl.y"
                        { strcpy((yyval.name), "|="); }
-#line 3075 "y.tab.c"
+#line 3110 "y.tab.c"
     break;
 
   case 88: /* expression: assignment_expression  */
-#line 462 "yapl.y"
+#line 491 "yapl.y"
                                 { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 3081 "y.tab.c"
+#line 3116 "y.tab.c"
     break;
 
   case 89: /* expression: expression ',' assignment_expression  */
-#line 463 "yapl.y"
+#line 492 "yapl.y"
                                                { strcpy((yyval.name), (yyvsp[0].name)); }
-#line 3087 "y.tab.c"
+#line 3122 "y.tab.c"
     break;
 
   case 167: /* declarator: pointer direct_declarator  */
-#line 607 "yapl.y"
+#line 636 "yapl.y"
                                     {pointer_decls++;}
-#line 3093 "y.tab.c"
+#line 3128 "y.tab.c"
     break;
 
   case 198: /* type_name: specifier_qualifier_list abstract_declarator  */
-#line 663 "yapl.y"
+#line 692 "yapl.y"
                                                        { strcpy((yyval.name), "type"); }
-#line 3099 "y.tab.c"
+#line 3134 "y.tab.c"
     break;
 
   case 199: /* type_name: specifier_qualifier_list  */
-#line 664 "yapl.y"
+#line 693 "yapl.y"
                                                        { strcpy((yyval.name), "type"); }
-#line 3105 "y.tab.c"
+#line 3140 "y.tab.c"
     break;
 
   case 255: /* expression_statement: ';'  */
-#line 765 "yapl.y"
+#line 794 "yapl.y"
               { strcpy((yyval.name), ""); }
-#line 3111 "y.tab.c"
+#line 3146 "y.tab.c"
     break;
 
   case 256: /* expression_statement: expression ';'  */
-#line 766 "yapl.y"
+#line 795 "yapl.y"
                          { strcpy((yyval.name), (yyvsp[-1].name)); }
-#line 3117 "y.tab.c"
+#line 3152 "y.tab.c"
     break;
 
   case 257: /* elif_list: ELIF '(' expression ')' statement  */
-#line 770 "yapl.y"
+#line 799 "yapl.y"
                                             { ladder_len++; }
-#line 3123 "y.tab.c"
+#line 3158 "y.tab.c"
     break;
 
   case 258: /* elif_list: elif_list ELIF '(' expression ')' statement  */
-#line 771 "yapl.y"
+#line 800 "yapl.y"
                                                       { ladder_len++; }
-#line 3129 "y.tab.c"
+#line 3164 "y.tab.c"
     break;
 
   case 259: /* if_prefix: IF '(' expression ')'  */
-#line 776 "yapl.y"
+#line 805 "yapl.y"
     {
         char *l_false = new_label();
         emit("ifFalse", (yyvsp[-1].name), "", l_false);
         strcpy((yyval.name), l_false); /* FIX: strcpy instead of = */
     }
-#line 3139 "y.tab.c"
+#line 3174 "y.tab.c"
     break;
 
   case 260: /* while_prefix: WHILE  */
-#line 785 "yapl.y"
+#line 814 "yapl.y"
     {
         char *l_start = new_label();
 		emit("LABEL", "", "", l_start);
         strcpy((yyval.name), l_start); /* FIX: strcpy */
     }
-#line 3149 "y.tab.c"
+#line 3184 "y.tab.c"
     break;
 
   case 261: /* while_cond: while_prefix '(' expression ')'  */
-#line 794 "yapl.y"
+#line 823 "yapl.y"
     {
         char *l_end = new_label();
         emit("ifFalse", (yyvsp[-1].name), "", l_end);
-        sprintf((yyval.name), "%s %s", (yyvsp[-3].name), l_end); /* Pack start and end labels */
+		pack2((yyval.name), sizeof((yyval.name)), (yyvsp[-3].name), l_end); /* Pack start and end labels */
     }
-#line 3159 "y.tab.c"
+#line 3194 "y.tab.c"
     break;
 
   case 262: /* @1: %empty  */
-#line 804 "yapl.y"
+#line 833 "yapl.y"
       {
           char *l_end = new_label();
 					emit("goto", "", "", l_end);
@@ -3169,30 +3204,30 @@ yyreduce:
           (yyval.val) = (ladder_len - 1); 
           strcpy((yyval.name), l_end); /* FIX: strcpy */
       }
-#line 3173 "y.tab.c"
+#line 3208 "y.tab.c"
     break;
 
   case 263: /* selection_statement: if_prefix statement ELSE @1 statement  */
-#line 814 "yapl.y"
+#line 843 "yapl.y"
       {
 		  emit("LABEL", "", "", (yyvsp[-1].name)); 
           if(ladder_len >= max) { max = ladder_len; } 
           ladder_len = (yyvsp[-1].val); 
       }
-#line 3183 "y.tab.c"
+#line 3218 "y.tab.c"
     break;
 
   case 264: /* selection_statement: if_prefix statement  */
-#line 822 "yapl.y"
+#line 851 "yapl.y"
       {
 					emit("LABEL", "", "", (yyvsp[-1].name));
           ifs_wo_else++;
       }
-#line 3192 "y.tab.c"
+#line 3227 "y.tab.c"
     break;
 
   case 265: /* @2: %empty  */
-#line 829 "yapl.y"
+#line 858 "yapl.y"
       {
           char *l_end = new_label();
 					emit("goto", "", "", l_end);
@@ -3202,71 +3237,71 @@ yyreduce:
           (yyval.val) = (ladder_len - 1); 
           strcpy((yyval.name), l_end); /* FIX: strcpy */
       }
-#line 3206 "y.tab.c"
+#line 3241 "y.tab.c"
     break;
 
   case 266: /* selection_statement: if_prefix statement elif_list ELSE @2 statement  */
-#line 839 "yapl.y"
+#line 868 "yapl.y"
       { 
 		  emit("LABEL", "", "", (yyvsp[-1].name));
           if(ladder_len >= max) { max = ladder_len; } 
           ladder_len = (yyvsp[-1].val); 
       }
-#line 3216 "y.tab.c"
+#line 3251 "y.tab.c"
     break;
 
   case 267: /* selection_statement: if_prefix statement elif_list  */
-#line 847 "yapl.y"
+#line 876 "yapl.y"
       { 
 					emit("LABEL", "", "", (yyvsp[-2].name));
       }
-#line 3224 "y.tab.c"
+#line 3259 "y.tab.c"
     break;
 
   case 269: /* iteration_statement: while_cond statement  */
-#line 856 "yapl.y"
+#line 885 "yapl.y"
       {
-          char l_start[10], l_end[10];
+					char l_start[32], l_end[32];
           sscanf((yyvsp[-1].name), "%s %s", l_start, l_end); /* Unpack labels from while_cond */
 					emit("goto", "", "", l_start);
 					emit("LABEL", "", "", l_end);
       }
-#line 3235 "y.tab.c"
+#line 3270 "y.tab.c"
     break;
 
   case 270: /* @3: %empty  */
-#line 865 "yapl.y"
+#line 894 "yapl.y"
       {
           char *l_start = new_label();
 					emit("LABEL", "", "", l_start);
           strcpy((yyval.name), l_start); /* FIX: strcpy */
       }
-#line 3245 "y.tab.c"
+#line 3280 "y.tab.c"
     break;
 
   case 271: /* iteration_statement: DO @3 statement WHILE '(' expression ')' ';'  */
-#line 871 "yapl.y"
+#line 900 "yapl.y"
       {
           char *l_end = new_label();
           emit("ifFalse", (yyvsp[-2].name), "", l_end);
 		  emit("goto", "", "", (yyvsp[-6].name)); 
 		  emit("LABEL", "", "", l_end);  
       }
-#line 3256 "y.tab.c"
+#line 3291 "y.tab.c"
     break;
 
   case 272: /* @4: %empty  */
-#line 880 "yapl.y"
+#line 909 "yapl.y"
       {
           char *l_cond = new_label();
 					emit("LABEL", "", "", l_cond);
           strcpy((yyval.name), l_cond); /* FIX: strcpy */
       }
-#line 3266 "y.tab.c"
+#line 3301 "y.tab.c"
     break;
 
   case 273: /* @5: %empty  */
-#line 886 "yapl.y"
+#line 915 "yapl.y"
       {
           char *l_body = new_label();
           char *l_inc = new_label();
@@ -3275,39 +3310,39 @@ yyreduce:
           emit("ifFalse", (yyvsp[0].name), "", l_end); 
 		  emit("goto", "", "", l_body);
 		  emit("LABEL", "", "", l_inc);
-          sprintf((yyval.name), "%s %s %s", l_body, l_inc, l_end);
+		  pack3((yyval.name), sizeof((yyval.name)), l_body, l_inc, l_end);
       }
-#line 3281 "y.tab.c"
+#line 3316 "y.tab.c"
     break;
 
   case 274: /* @6: %empty  */
-#line 897 "yapl.y"
+#line 926 "yapl.y"
       {
 		  emit("goto", "", "", (yyvsp[-3].name)); 
           
-          char l_body[10], l_inc[10], l_end[10];
+		  char l_body[32], l_inc[32], l_end[32];
           sscanf((yyvsp[-1].name), "%s %s %s", l_body, l_inc, l_end);
           
 		  emit("LABEL", "", "", l_body);
-          sprintf((yyval.name), "%s %s", l_inc, l_end); 
+		  pack2((yyval.name), sizeof((yyval.name)), l_inc, l_end); 
       }
-#line 3295 "y.tab.c"
+#line 3330 "y.tab.c"
     break;
 
   case 275: /* iteration_statement: FOR '(' expression_statement @4 expression_statement @5 expression @6 ')' statement  */
-#line 907 "yapl.y"
+#line 936 "yapl.y"
       {
-          char l_inc[10], l_end[10];
+		  char l_inc[32], l_end[32];
           sscanf((yyvsp[-2].name), "%s %s", l_inc, l_end);
           
 		  emit("goto", "", "", l_inc);
 		  emit("LABEL", "", "", l_end);
       }
-#line 3307 "y.tab.c"
+#line 3342 "y.tab.c"
     break;
 
   case 276: /* @7: %empty  */
-#line 917 "yapl.y"
+#line 946 "yapl.y"
       {
           emit("=", (yyvsp[-4].name), "", (yyvsp[-8].name));
           char *l_cond = new_label();
@@ -3318,15 +3353,15 @@ yyreduce:
           emit("<=", (yyvsp[-8].name), (yyvsp[-2].name), t_cond);
           emit("ifFalse", t_cond, "", l_end);
           
-          sprintf((yyval.name), "%s %s %s", l_cond, l_end, (yyvsp[-8].name));
+		  pack3((yyval.name), sizeof((yyval.name)), l_cond, l_end, (yyvsp[-8].name));
       }
-#line 3324 "y.tab.c"
+#line 3359 "y.tab.c"
     break;
 
   case 277: /* iteration_statement: FOR '(' IDENTIFIER IN RANGE '(' assignment_expression ',' assignment_expression ')' ')' @7 statement  */
-#line 930 "yapl.y"
+#line 959 "yapl.y"
       {
-          char l_cond[10], l_end[10], id_name[50];
+		  char l_cond[32], l_end[32], id_name[200];
           sscanf((yyvsp[-1].name), "%s %s %s", l_cond, l_end, id_name);
           
           char *t_inc = new_temp();
@@ -3336,29 +3371,29 @@ yyreduce:
 		  emit("goto", "", "", l_cond);
 		  emit("LABEL", "", "", l_end);
       }
-#line 3340 "y.tab.c"
+#line 3375 "y.tab.c"
     break;
 
   case 284: /* translation_unit: external_declaration  */
-#line 956 "yapl.y"
+#line 985 "yapl.y"
                                {global_declarations++;}
-#line 3346 "y.tab.c"
+#line 3381 "y.tab.c"
     break;
 
   case 285: /* translation_unit: translation_unit external_declaration  */
-#line 957 "yapl.y"
+#line 986 "yapl.y"
                                                 {global_declarations++;}
-#line 3352 "y.tab.c"
+#line 3387 "y.tab.c"
     break;
 
   case 286: /* external_declaration: function_definition  */
-#line 961 "yapl.y"
+#line 990 "yapl.y"
                               {func_definitions++;}
-#line 3358 "y.tab.c"
+#line 3393 "y.tab.c"
     break;
 
 
-#line 3362 "y.tab.c"
+#line 3397 "y.tab.c"
 
       default: break;
     }
@@ -3582,7 +3617,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 975 "yapl.y"
+#line 1004 "yapl.y"
 
 char buff[2048];
 
@@ -4016,7 +4051,7 @@ static void format_quad_statement(const struct quadruple *q, char *out, size_t o
 }
 
 void print_quad_table() {
-	char stmt[128];
+	char stmt[512];
 
     printf("\n--- Generated Intermediate Code (Quadruples) ---\n");
 	printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", "statement", "op", "arg1", "arg2", "result");

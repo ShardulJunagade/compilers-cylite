@@ -19,3 +19,8 @@ Assignment 3:
 - Code: [`cylite_A3`](./cylite_A3/)
 - Report: [Assignment 3 Report](./cylite_A3/A3_report.pdf) (Main Submission)
 - Running Instructions: [README.md](./cylite_A3/README.md)
+
+Assignment 4:
+- Code: [`cylite_A4`](./cylite_A4/)
+- Report: [Assignment 4 Report](./cylite_A4/report/report_A4.pdf) (Main Submission)
+- Running Instructions: [README.md](./cylite_A4/README.md)

@@ -22,10 +22,10 @@ int max=-1;
 int label_count = 0;
 
 struct quadruple {
-    char op[10];
-    char arg1[50];
-    char arg2[50];
-    char result[50];
+	char op[16];
+	char arg1[200];
+	char arg2[200];
+	char result[200];
 };
 
 struct quadruple quad_table[1000];
@@ -34,14 +34,14 @@ int temp_count = 0;
 
 /* Generates t1, t2, t3... */
 char* new_temp() {
-    char* t = (char*)malloc(10);
-    sprintf(t, "t%d", ++temp_count);
+	char* t = (char*)malloc(32);
+	snprintf(t, 32, "t%d", ++temp_count);
     return t;
 }
 
 char* new_label() {
-    char* l = (char*)malloc(10);
-    sprintf(l, "L%d", ++label_count);
+	char* l = (char*)malloc(32);
+	snprintf(l, 32, "L%d", ++label_count);
     return l;
 }
 
@@ -52,6 +52,35 @@ void emit(char* op, char* arg1, char* arg2, char* res) {
     strcpy(quad_table[quad_idx].arg2, arg2);
     strcpy(quad_table[quad_idx].result, res);
     quad_idx++;
+}
+
+static void pack2(char *dst, size_t dst_sz, const char *a, const char *b) {
+	size_t used;
+
+	if (dst_sz == 0) {
+		return;
+	}
+
+	dst[0] = '\0';
+	if (a != NULL) {
+		strncat(dst, a, dst_sz - 1);
+	}
+
+	used = strlen(dst);
+	if (b != NULL && b[0] != '\0' && used < dst_sz - 1) {
+		strncat(dst, " ", dst_sz - 1 - used);
+		used = strlen(dst);
+		strncat(dst, b, dst_sz - 1 - used);
+	}
+}
+
+static void pack3(char *dst, size_t dst_sz, const char *a, const char *b, const char *c) {
+	pack2(dst, dst_sz, a, b);
+
+	if (c != NULL && c[0] != '\0' && strlen(dst) < dst_sz - 1) {
+		strncat(dst, " ", dst_sz - 1 - strlen(dst));
+		strncat(dst, c, dst_sz - 1 - strlen(dst));
+	}
 }
 
 #define YYDEBUG 1
@@ -89,7 +118,7 @@ static void free_derivation_steps(void);
 %}
 
 %union {
-    char name[50];  /* Holds variable names or temp names like 't1' */
+	char name[200];  /* Holds variable names or temp names like 't1' */
     int val;
     struct symtab *symp; /* Added from your second union */
 }
@@ -148,8 +177,8 @@ primary_expression
     ;
 
 constant
-	: I_CONSTANT {int_consts++;}	
-	| F_CONSTANT
+	: I_CONSTANT { int_consts++; strcpy($$, $1); }	
+	| F_CONSTANT { strcpy($$, $1); }
 	| ENUMERATION_CONSTANT { strcpy($$, "enum_const"); } 
 	;
 enumeration_constant		/* before it has been defined as such */
@@ -410,7 +439,7 @@ assignment_expression
 	}
         | unary_expression assignment_operator assignment_expression
         {
-                char target[50];
+			char target[200];
                 strcpy(target, $1);
                 
                 // VALIDATION CHECK: Eliminate unary ops on LHS
@@ -794,7 +823,7 @@ while_cond
     {
         char *l_end = new_label();
         emit("ifFalse", $3, "", l_end);
-        sprintf($$, "%s %s", $1, l_end); /* Pack start and end labels */
+		pack2($$, sizeof($$), $1, l_end); /* Pack start and end labels */
     }
     ;
 
@@ -854,7 +883,7 @@ iteration_statement
     /* RULE 1: WHILE Loop */
     : while_cond statement
       {
-          char l_start[10], l_end[10];
+					char l_start[32], l_end[32];
           sscanf($1, "%s %s", l_start, l_end); /* Unpack labels from while_cond */
 					emit("goto", "", "", l_start);
 					emit("LABEL", "", "", l_end);
@@ -891,21 +920,21 @@ iteration_statement
           emit("ifFalse", $5, "", l_end); 
 		  emit("goto", "", "", l_body);
 		  emit("LABEL", "", "", l_inc);
-          sprintf($<name>$, "%s %s %s", l_body, l_inc, l_end);
+		  pack3($<name>$, sizeof($<name>$), l_body, l_inc, l_end);
       }
       expression 
       {
 		  emit("goto", "", "", $<name>4); 
           
-          char l_body[10], l_inc[10], l_end[10];
+		  char l_body[32], l_inc[32], l_end[32];
           sscanf($<name>6, "%s %s %s", l_body, l_inc, l_end);
           
 		  emit("LABEL", "", "", l_body);
-          sprintf($<name>$, "%s %s", l_inc, l_end); 
+		  pack2($<name>$, sizeof($<name>$), l_inc, l_end); 
       }
       ')' statement
       {
-          char l_inc[10], l_end[10];
+		  char l_inc[32], l_end[32];
           sscanf($<name>8, "%s %s", l_inc, l_end);
           
 		  emit("goto", "", "", l_inc);
@@ -924,11 +953,11 @@ iteration_statement
           emit("<=", $3, $9, t_cond);
           emit("ifFalse", t_cond, "", l_end);
           
-          sprintf($<name>$, "%s %s %s", l_cond, l_end, $3);
+		  pack3($<name>$, sizeof($<name>$), l_cond, l_end, $3);
       }
       statement
       {
-          char l_cond[10], l_end[10], id_name[50];
+		  char l_cond[32], l_end[32], id_name[200];
           sscanf($<name>12, "%s %s %s", l_cond, l_end, id_name);
           
           char *t_inc = new_temp();
@@ -1405,7 +1434,7 @@ static void format_quad_statement(const struct quadruple *q, char *out, size_t o
 }
 
 void print_quad_table() {
-	char stmt[128];
+	char stmt[512];
 
     printf("\n--- Generated Intermediate Code (Quadruples) ---\n");
 	printf("%-18s | %-10s | %-10s | %-10s | %-10s\n", "statement", "op", "arg1", "arg2", "result");

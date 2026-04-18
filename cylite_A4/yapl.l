@@ -88,14 +88,14 @@ int yytok_col = 1;
 
 
 {L}{A}* { 
-    strcpy(yylval.name, yytext);
+    snprintf(yylval.name, sizeof(yylval.name), "%s", yytext);
     return check_type(); 
 }
 
 {HP}{H}+{IS}? |
 {NZ}{D}*{IS}? |
 "0"{O}*{IS}? { 
-    strcpy(yylval.name, yytext); /* Copy "5" or "10" to the parser */
+    snprintf(yylval.name, sizeof(yylval.name), "%s", yytext); /* Copy "5" or "10" to the parser */
     return I_CONSTANT; 
 }
 
