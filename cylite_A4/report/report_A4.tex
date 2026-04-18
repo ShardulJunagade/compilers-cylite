@@ -192,7 +192,7 @@ This section presents Assignment 4 changes in a logical compiler flow, from IR s
 
 Error reporting remains robust through verbose parser diagnostics and guarded input handling, ensuring malformed inputs terminate cleanly with meaningful messages rather than causing unstable behavior.
 
-\section{Part 3 (3 marks): Code Output Format}
+\section{Part 3 : Code Output Format}
 
 This section demonstrates output-format compliance using testcase \texttt{testcases\_a4/tc1.c}.
 
@@ -242,47 +242,6 @@ After normalizing control-flow emission, the generated IR now shows branch targe
     \caption{row-wise TAC table with readable temporaries and separated source/IR blocks.}
 \end{figure}
 
-
-\section{Part 4 (3 marks): Error Handling}
-
-This section explains diagnostic behavior during code generation and parsing.
-
-\subsection{Observed Error Behavior (invalid-input run)}
-To verify robustness on incorrect input, the parser was run on:
-\begin{lstlisting}
-int main() {
-    int a;
-    a = b + ;
-    return 0;
-}
-\end{lstlisting}
-
-Observed diagnostic:
-\begin{lstlisting}
-***parsing terminated*** [syntax error]
-line 3, column 13: unexpected token ";"
-\end{lstlisting}
-
-\subsection{Requirement-wise Explanation}
-\begin{itemize}
-    \item \textbf{Detect invalid expressions or unsupported constructs:} The malformed assignment \texttt{a = b + ;} is detected immediately and parser termination is triggered correctly.
-    \item \textbf{Display meaningful error messages:} The diagnostic includes both line and column information and reports the unexpected token, which is useful for debugging.
-    \item \textbf{Ensure program does not crash on incorrect input:} The parser exits gracefully with a controlled error message instead of crashing or producing corrupted IR.
-\end{itemize}
-
-\subsection{Result}
-The implementation satisfies Part 4 expectations for practical diagnostics and runtime robustness. Invalid input is handled predictably and reported with useful location information.
-
-\subsection{Batch Result on Regenerated Testcases}
-Following the latest parser updates, all testcase files \texttt{tc1.c} through \texttt{tc10.c} were rerun and outputs were regenerated in \texttt{testcases\_a4/tc1.txt} to \texttt{testcases\_a4/tc10.txt}. All runs completed successfully and produced parsing-success diagnostics along with IR tables.
-
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{./Images/image11.png}
-    \caption{meaningful syntax-error reporting and graceful termination on incorrect input.}
-\end{figure}
-
 \section{Additional Worked Example: \texttt{tc3.c}}
 
 To further explain intermediate-code generation, this section analyzes testcase \texttt{testcases\_a4/tc3.c}, which contains a simple \texttt{if} condition without \texttt{else}.
@@ -330,6 +289,46 @@ LABEL L1 & LABEL &  &  & L1 \\
 \subsection{Result}
 This testcase confirms correct translation of a single-branch \texttt{if} statement into TAC: condition computation, conditional jump, body instructions, and final label placement are all emitted in proper execution order.
 
+
+\section{Part 4 Error Handling}
+
+This section explains diagnostic behavior during code generation and parsing.
+
+\subsection{Observed Error Behavior (invalid-input run)}
+To verify robustness on incorrect input, the parser was run on:
+\begin{lstlisting}
+int main() {
+    int a;
+    a = b + ;
+    return 0;
+}
+\end{lstlisting}
+
+Observed diagnostic:
+\begin{lstlisting}
+***parsing terminated*** [syntax error]
+line 3, column 13: unexpected token ";"
+\end{lstlisting}
+
+\subsection{Requirement-wise Explanation}
+\begin{itemize}
+    \item \textbf{Detect invalid expressions or unsupported constructs:} The malformed assignment \texttt{a = b + ;} is detected immediately and parser termination is triggered correctly.
+    \item \textbf{Display meaningful error messages:} The diagnostic includes both line and column information and reports the unexpected token, which is useful for debugging.
+    \item \textbf{Ensure program does not crash on incorrect input:} The parser exits gracefully with a controlled error message instead of crashing or producing corrupted IR.
+\end{itemize}
+
+\subsection{Result}
+The implementation satisfies Part 4 expectations for practical diagnostics and runtime robustness. Invalid input is handled predictably and reported with useful location information.
+
+\subsection{Batch Result on Regenerated Testcases}
+Following the latest parser updates, all testcase files \texttt{tc1.c} through \texttt{tc10.c} were rerun and outputs were regenerated in \texttt{testcases\_a4/tc1.txt} to \texttt{testcases\_a4/tc10.txt}. All runs completed successfully and produced parsing-success diagnostics along with IR tables.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{./Images/image11.png}
+    \caption{meaningful syntax-error reporting and graceful termination on incorrect input.}
+\end{figure}
 
 \section{Build and Reproduction Steps}
 
