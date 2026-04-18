@@ -1,2 +1,0 @@
-***parsing terminated*** [syntax error]
-line 4, column 5: unexpected token "@"
