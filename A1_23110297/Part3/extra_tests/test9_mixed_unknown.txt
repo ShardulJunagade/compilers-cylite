@@ -1,0 +1,3 @@
+int x = 10 @ 20;
+char c = 'a';
+float z = 3.14;

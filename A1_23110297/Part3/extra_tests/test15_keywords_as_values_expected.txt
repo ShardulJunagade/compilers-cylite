@@ -1,0 +1,13 @@
+<KEYWORD, int>
+<KEYWORD, int>
+<OPERATOR, =>
+<KEYWORD, int>
+<PUNCTUATION, ;>
+<KEYWORD, if>
+<KEYWORD, if>
+<OPERATOR, =>
+<KEYWORD, if>
+<PUNCTUATION, ;>
+<KEYWORD, return>
+<KEYWORD, return>
+<PUNCTUATION, ;>

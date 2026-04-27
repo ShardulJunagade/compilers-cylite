@@ -1,0 +1,13 @@
+a. What changed in hello.i compared to hello.c? (List at least 3 observations)
+
+1. The #include directive was expanded - all the contents of stdio.h header file got included directly, replacing the single line #include statement.
+2. The #define MESSAGE macro was replaced throughout the code with its actual value "Hello from CS327".
+3. The file grew from 7 lines to 820 lines because the preprocessor inserted all the standard library declarations and definitions from the included headers.
+
+b. How many lines are in hello.s? What do the first 10 lines do?
+
+There are 45 lines in hello.s. The first 10 lines set up the basic assembly structure - they specify the source filename, define sections like .text and .rodata (read-only data), create a string constant for "Hello from CS327", and begin the definition of the main function with its label and type information.
+
+c. What is the size difference between hello.o and the final executable hello?
+
+The object file hello.o is 1.5K while the final executable hello is 16K. The difference is about 14.5K, which happens because the linker adds startup code, library functions, and other runtime support needed to make the program actually runnable on the system.

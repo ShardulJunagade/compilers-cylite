@@ -1,0 +1,3 @@
+<IDENTIFIER, ___triple_underscore>
+<IDENTIFIER, _123numbers_after_underscore>
+<IDENTIFIER, int123>

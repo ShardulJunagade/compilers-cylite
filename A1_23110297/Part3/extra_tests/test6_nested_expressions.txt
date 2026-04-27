@@ -1,0 +1,9 @@
+int main() {
+    if (x > 5) {
+        while (y < 10) {
+            y = y + 1;
+        }
+    } else {
+        return 0;
+    }
+}

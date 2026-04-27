@@ -1,0 +1,15 @@
+<KEYWORD, int>
+<IDENTIFIER, variable_name_123>
+<OPERATOR, =>
+<NUMBER, 999999>
+<PUNCTUATION, ;>
+<KEYWORD, char>
+<IDENTIFIER, _underscore_start>
+<OPERATOR, =>
+<NUMBER, 42>
+<PUNCTUATION, ;>
+<KEYWORD, int>
+<IDENTIFIER, a1b2c3d4e5>
+<OPERATOR, =>
+<NUMBER, 100>
+<PUNCTUATION, ;>
